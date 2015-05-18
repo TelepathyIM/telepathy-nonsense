@@ -1,0 +1,4 @@
+#define telepathy_qxmpp_VERSION_MAJOR @telepathy_qxmpp_VERSION_MAJOR@
+#define telepathy_qxmpp_VERSION_MINOR @telepathy_qxmpp_VERSION_MINOR@
+
+#define telepathy_qxmpp_VERSION_STRING QLatin1String("@telepathy_qxmpp_VERSION_MAJOR@.@telepathy_qxmpp_VERSION_MINOR@")
