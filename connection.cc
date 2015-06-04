@@ -114,7 +114,9 @@ void Connection::doConnect(Tp::DBusError *error)
     m_client = new QXmppClient();
     m_client->versionManager().setClientName(qAppName());
     m_client->versionManager().setClientVersion(telepathy_qxmpp_VERSION_STRING);
+#if QT_VERSION >= 0x050000
     m_client->versionManager().setClientOs(QSysInfo::prettyProductName());
+#endif
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
  //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
@@ -175,7 +177,9 @@ void Connection::onConnected()
     m_saslIface->setSaslStatus(Tp::SASLStatusSucceeded, QLatin1String("Succeeded"), QVariantMap());
 
     Tp::SimpleContactPresences presences;
-    presences[selfHandle()] = toTpPresence({{m_clientConfig.jidBare(), m_client->clientPresence()}});
+    QMap<QString, QXmppPresence> clientPresence;
+    clientPresence.insert(m_clientConfig.jidBare(), m_client->clientPresence());
+    presences[selfHandle()] = toTpPresence(clientPresence);
     m_simplePresenceIface->setPresences(presences);
 
     m_contactListIface->setContactListState(Tp::ContactListStateWaiting);
@@ -253,9 +257,12 @@ uint Connection::setPresence(const QString &status, const QString &message, Tp::
 
 void Connection::onPresenceReceived(const QXmppPresence &presence)
 {
-    Tp::SimpleContactPresences presences;
     QString jid = QXmppUtils::jidToBareJid(presence.from());
-    presences[m_uniqueHandleMap[jid]] = toTpPresence({{jid, presence}});
+    QMap<QString, QXmppPresence> receivedPresence;
+    receivedPresence.insert(jid, presence);
+
+    Tp::SimpleContactPresences presences;
+    presences[m_uniqueHandleMap[jid]] = toTpPresence(receivedPresence);
     m_simplePresenceIface->setPresences(presences);
 
     if (presence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
