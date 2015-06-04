@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 find_package(TelepathyQt5 0.9.5 REQUIRED)
 find_package(TelepathyQt5Service 0.9.5 REQUIRED)
 
-find_package(QXmpp REQUIRED)
+find_package(QXmpp 0.8.1 REQUIRED)
 
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
