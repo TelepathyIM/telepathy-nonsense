@@ -376,46 +376,58 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
 
 Tp::SimplePresence Connection::toTpPresence(QMap<QString, QXmppPresence> presences)
 {
-    //TODO check
-    QString statusText;
-    QXmppPresence::AvailableStatusType minPresence = QXmppPresence::Invisible;
-    for(auto &presence : presences) {
-        if (minPresence > presence.availableStatusType()) {
-            statusText = presence.statusText();
-            minPresence = presence.availableStatusType();
+    QXmppPresence maxPresence(QXmppPresence::Error);
+
+    for (const QXmppPresence &presence : presences) {
+        if (presence.type() == QXmppPresence::Error) {
+            continue;
+        }
+
+        if (maxPresence.type() == QXmppPresence::Error) {
+            maxPresence = presence;
+            continue;
+        }
+
+        if (maxPresence.availableStatusType() > presence.availableStatusType()) {
+            maxPresence = presence;
         }
     }
 
     Tp::SimplePresence tpPresence;
-    tpPresence.statusMessage = statusText;
-
-    switch (minPresence) {
-    case QXmppPresence::Online:
-        tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
-        tpPresence.status = QLatin1String("available");
-        break;
-    case QXmppPresence::Away:
-        tpPresence.type = Tp::ConnectionPresenceTypeAway;
-        tpPresence.status = QLatin1String("away");
-        break;
-    case QXmppPresence::XA:
-        tpPresence.type = Tp::ConnectionPresenceTypeExtendedAway;
-        tpPresence.status = QLatin1String("xa");
-        break;
-    case QXmppPresence::DND:
-        tpPresence.type = Tp::ConnectionPresenceTypeBusy;
-        tpPresence.status = QLatin1String("dnd");
-        break;
-    case QXmppPresence::Chat:
-        tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
-        tpPresence.status = QLatin1String("chat");
-        break;
-    case QXmppPresence::Invisible:
-        tpPresence.type = Tp::ConnectionPresenceTypeHidden;
-        tpPresence.status = QLatin1String("hidden");
-        break;
+    tpPresence.statusMessage = maxPresence.statusText();
+    if (maxPresence.type() == QXmppPresence::Available) {
+        switch (maxPresence.availableStatusType()) {
+        case QXmppPresence::Online:
+            tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
+            tpPresence.status = QLatin1String("available");
+            break;
+        case QXmppPresence::Away:
+            tpPresence.type = Tp::ConnectionPresenceTypeAway;
+            tpPresence.status = QLatin1String("away");
+            break;
+        case QXmppPresence::XA:
+            tpPresence.type = Tp::ConnectionPresenceTypeExtendedAway;
+            tpPresence.status = QLatin1String("xa");
+            break;
+        case QXmppPresence::DND:
+            tpPresence.type = Tp::ConnectionPresenceTypeBusy;
+            tpPresence.status = QLatin1String("dnd");
+            break;
+        case QXmppPresence::Chat:
+            tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
+            tpPresence.status = QLatin1String("chat");
+            break;
+        case QXmppPresence::Invisible:
+            tpPresence.type = Tp::ConnectionPresenceTypeHidden;
+            tpPresence.status = QLatin1String("hidden");
+            break;
+        }
+    } else {
+        tpPresence.type = Tp::ConnectionPresenceTypeOffline;
+        tpPresence.status = QLatin1String("offline");
     }
-    qDebug() << "TP presence: " << tpPresence.type << " "  << tpPresence.status;
+
+//    qDebug() << "TP presence: " << tpPresence.type << " "  << tpPresence.status;
     return tpPresence;
 }
 
