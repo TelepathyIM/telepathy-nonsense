@@ -95,7 +95,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_clientConfig.setAutoReconnectionEnabled(false);
     m_clientConfig.setIgnoreSslErrors(false);
     m_clientPresence.setPriority(priority);
-    setSelfHandle(m_uniqueHandleMap[myJid]);
+    setSelfContact(m_uniqueHandleMap[myJid], myJid);
 
     setConnectCallback(Tp::memFun(this, &Connection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &Connection::inspectHandles));
@@ -133,7 +133,7 @@ void Connection::doConnect(Tp::DBusError *error)
 
     //SASL channel registration
     Tp::DBusError saslError;
-    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_SERVER_AUTHENTICATION, 0, Tp::HandleTypeNone);
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, TP_QT_IFACE_CHANNEL_TYPE_SERVER_AUTHENTICATION);
     Tp::BaseChannelServerAuthenticationTypePtr authType = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
@@ -570,18 +570,44 @@ void Connection::unpublish(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 }
 
-Tp::BaseChannelPtr Connection::createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, const QVariantMap &request, Tp::DBusError *error)
+Tp::BaseChannelPtr Connection::createChannel(const QVariantMap &request, Tp::DBusError *error)
 {
     DBG;
 
-    if ((targetHandleType != Tp::HandleTypeContact) || (targetHandle == 0)) {
-          error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("createChannel error"));
-          return Tp::BaseChannelPtr();
+    const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
+
+    uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
+    uint targetHandle = 0;
+    QString targetID;
+
+    switch (targetHandleType) {
+    case Tp::HandleTypeContact:
+        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
+            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+            targetID = m_uniqueHandleMap[targetHandle];
+        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
+            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
+            targetHandle = m_uniqueHandleMap[targetID];
+        }
+        break;
+    default:
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
+        }
+        return Tp::BaseChannelPtr();
+        break;
     }
 
-    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, targetHandle, targetHandleType);
+    if (targetID.isEmpty()) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
+        }
+        return Tp::BaseChannelPtr();
+    }
 
-    QString jid = m_uniqueHandleMap[targetHandle];
+
+    Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
+    baseChannel->setTargetID(targetID);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
         TextChannelPtr textChannel = TextChannel::create(m_client, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
@@ -595,15 +621,20 @@ void Connection::onMessageReceived(const QXmppMessage &message)
 {
     uint initiatorHandle, targetHandle;
 
-    //TODO all of this
-    Tp::HandleType handleType = Tp::HandleTypeContact;
     initiatorHandle = targetHandle = m_uniqueHandleMap[QXmppUtils::jidToBareJid(message.from())];
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
     bool yours;
-    const QVariantMap request;
-    Tp::BaseChannelPtr channel = ensureChannel(TP_QT_IFACE_CHANNEL_TYPE_TEXT, handleType, targetHandle, yours, initiatorHandle, false, request, &error);
+
+    QVariantMap request;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeContact;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
+
+    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+
     if (error.isValid()) {
         qWarning() << "ensureChannel failed:" << error.name() << " " << error.message();
         return;

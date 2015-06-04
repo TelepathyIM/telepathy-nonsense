@@ -48,7 +48,7 @@ private:
     void unsubscribe(const Tp::UIntList &handles, Tp::DBusError *error);
     void unpublish(const Tp::UIntList &handles, Tp::DBusError *error);
     void saslStartMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error);
-    Tp::BaseChannelPtr createChannel(const QString &channelType, uint targetHandleType, uint targetHandle, const QVariantMap &request, Tp::DBusError *error);
+    Tp::BaseChannelPtr createChannel(const QVariantMap &request, Tp::DBusError *error);
     void requestAvatars(const Tp::UIntList &handles, Tp::DBusError *error);
     Tp::AvatarTokenMap getKnownAvatarTokens(const Tp::UIntList &contacts, Tp::DBusError *error);
     void clearAvatar(Tp::DBusError *error);
