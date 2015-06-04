@@ -15,11 +15,11 @@
 #include "textchannel.hh"
 #include "common.hh"
 
-TextChannel::TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint contactHandle, const QString &contactJid, uint selfHandle, const QString &selfJid)
+TextChannel::TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
     : Tp::BaseChannelTextType(baseChannel),
       m_client(client),
-      m_contactHandle(contactHandle),
-      m_contactJid(contactJid),
+      m_contactHandle(baseChannel->targetHandle()),
+      m_contactJid(baseChannel->targetID()),
       m_selfHandle(selfHandle),
       m_selfJid(selfJid)
 {
@@ -48,9 +48,9 @@ TextChannel::TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 }
 
-TextChannelPtr TextChannel::create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &jid, uint selfHandle, const QString &selfJid)
+TextChannelPtr TextChannel::create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
 {
-    return TextChannelPtr(new TextChannel(client, baseChannel, targetHandle, jid, selfHandle, selfJid));
+    return TextChannelPtr(new TextChannel(client, baseChannel, selfHandle, selfJid));
 }
 
 QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)

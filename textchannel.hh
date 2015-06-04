@@ -28,13 +28,13 @@ class TextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static TextChannelPtr create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint contactHandle, const QString &contactJid, uint selfHandle, const QString &selfJid);
+    static TextChannelPtr create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
 
 public slots:
     void onMessageReceived(const QXmppMessage &message);
 
 private:
-    TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint targetHandle, const QString &jid, uint selfHandle, const QString &selfJid);
+    TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
     QString sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
     void setChatState(uint state, Tp::DBusError *error);
     void messageAcknowledged(const QString &messageId);

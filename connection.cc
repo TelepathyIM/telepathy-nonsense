@@ -577,7 +577,7 @@ Tp::BaseChannelPtr Connection::createChannel(const QString &channelType, uint ta
     QString jid = m_uniqueHandleMap[targetHandle];
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        TextChannelPtr textChannel = TextChannel::create(m_client, baseChannel.data(), targetHandle, jid, selfHandle(), m_clientConfig.jidBare());
+        TextChannelPtr textChannel = TextChannel::create(m_client, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 
