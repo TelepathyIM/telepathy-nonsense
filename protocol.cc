@@ -22,6 +22,7 @@
 #include <TelepathyQt/RequestableChannelClassSpecList>
 #include <TelepathyQt/Types>
 #include <TelepathyQt/ProtocolParameterList>
+#include <TelepathyQt/Utils>
 
 #include <QXmppUtils.h>
 
@@ -73,7 +74,7 @@ QString Protocol::identifyAccount(const QVariantMap &parameters, Tp::DBusError *
 {
     Q_UNUSED(error)
 
-    return parameters[QLatin1String("account")].toString().toHtmlEscaped();
+    return Tp::escapeAsIdentifier(parameters[QLatin1String("account")].toString());
 }
 
 QString Protocol::normalizeContact(const QString &contactId, Tp::DBusError *error)
