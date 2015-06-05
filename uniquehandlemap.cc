@@ -20,16 +20,18 @@ UniqueHandleMap::UniqueHandleMap()
 
 const QString UniqueHandleMap::operator[] (const uint handle)
 {
-    if (handle > static_cast<uint>(m_knownHandles.size()))
+    if (handle > static_cast<uint>(m_knownHandles.size())) {
         return QString();
+    }
     return m_knownHandles[handle - 1];
 }
 
 uint UniqueHandleMap::operator[] (const QString& bareJid)
 {
     int idx = m_knownHandles.indexOf(bareJid);
-    if (idx != -1)
+    if (idx != -1) {
         return idx + 1;
+    }
 
     m_knownHandles.append(bareJid);
     return m_knownHandles.size();
