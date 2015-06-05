@@ -676,25 +676,17 @@ void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *erro
 void Connection::onVCardReceived(QXmppVCardIq iq)
 {
     DBG;
-    if (!m_avatarTokens[QXmppUtils::jidToBareJid(iq.to())].isEmpty()) {
-        m_avatarsIface->avatarRetrieved(m_uniqueHandleMap[QXmppUtils::jidToBareJid(iq.to())], m_avatarTokens[QXmppUtils::jidToBareJid(iq.to())], iq.photo(), iq.photoType());
-    } else {
-        Q_ASSERT(0);
-    }
+    QByteArray photoHash = QCryptographicHash::hash(iq.photo(), QCryptographicHash::Sha1);
+    m_avatarTokens[QXmppUtils::jidToBareJid(iq.from())] = photoHash;
+    m_avatarsIface->avatarRetrieved(m_uniqueHandleMap[QXmppUtils::jidToBareJid(iq.from())], photoHash, iq.photo(), iq.photoType());
 }
 
 void Connection::onClientVCardReceived()
 {
-//     if (!m_client->vCardManager().clientVCard().photo().isEmpty()) {
-//         QByteArray hash = QCryptographicHash::hash(m_client->vCardManager().clientVCard().photo(), QCryptographicHash::Sha1);
-//         m_avatarTokens[m_clientConfig.jidBare()] = hash;
-//     }
     DBG;
-    if (!m_avatarTokens[m_clientConfig.jidBare()].isEmpty()) {
-        m_avatarsIface->avatarRetrieved(selfHandle(), m_avatarTokens[m_clientConfig.jidBare()], m_client->vCardManager().clientVCard().photo(), m_client->vCardManager().clientVCard().photoType());
-    } else {
-        Q_ASSERT(0);
-    }
+    QByteArray photoHash = QCryptographicHash::hash(m_client->vCardManager().clientVCard().photo(), QCryptographicHash::Sha1);
+    m_avatarTokens[m_clientConfig.jidBare()] = photoHash;
+    m_avatarsIface->avatarRetrieved(selfHandle(), photoHash, m_client->vCardManager().clientVCard().photo(), m_client->vCardManager().clientVCard().photoType());
 }
 
 Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles, Tp::DBusError *error)
