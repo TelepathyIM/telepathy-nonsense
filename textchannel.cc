@@ -78,7 +78,6 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     }
     message.setBody(content);
 
-    m_messagesIface->messageSent(messageParts, outFlags, messageToken.toString());
     m_client->sendPacket(message);
     return messageToken.toString();
 }
