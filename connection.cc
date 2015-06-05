@@ -294,10 +294,10 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
     //TODO check
 
     Tp::ContactAttributesMap contactAttributes;
+    QStringList bareJids = m_client->rosterManager().getRosterBareJids();
 
     for (auto handle : handles) {
         QString bareJid = m_uniqueHandleMap[handle];
-        QStringList bareJids = m_client->rosterManager().getRosterBareJids();
         QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(bareJid);
         QVariantMap attributes;
 
@@ -365,8 +365,6 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
                     attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[bareJid]);
                 }
             }
-        } else {
-            Q_ASSERT(0);
         }
 
         contactAttributes[handle] = attributes;
