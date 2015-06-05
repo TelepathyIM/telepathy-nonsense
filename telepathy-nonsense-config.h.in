@@ -1,0 +1,4 @@
+#define telepathy_nonsense_VERSION_MAJOR @telepathy_nonsense_VERSION_MAJOR@
+#define telepathy_nonsense_VERSION_MINOR @telepathy_nonsense_VERSION_MINOR@
+
+#define telepathy_nonsense_VERSION_STRING QLatin1String("@telepathy_nonsense_VERSION_MAJOR@.@telepathy_nonsense_VERSION_MINOR@")

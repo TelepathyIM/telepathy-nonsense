@@ -12,8 +12,8 @@
 
 */
 
-#ifndef QXMPP_TEXTCHANNEL_HPP
-#define QXMPP_TEXTCHANNEL_HPP
+#ifndef TEXTCHANNEL_HH
+#define TEXTCHANNEL_HH
 
 #include <TelepathyQt/BaseChannel>
 
@@ -50,4 +50,4 @@ private:
     QString m_selfJid;
 };
 
-#endif // QXMPP_TEXTCHANNEL_HPP
+#endif // TEXTCHANNEL_HH

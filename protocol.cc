@@ -65,7 +65,7 @@ Tp::BaseConnectionPtr Protocol::createConnection(const QVariantMap &parameters, 
 {
     Q_UNUSED(error)
 
-    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<Connection>(QLatin1String("qxmpp"), name(), parameters);
+    Tp::BaseConnectionPtr newConnection = Tp::BaseConnection::create<Connection>(QLatin1String("nonsense"), name(), parameters);
 
     return newConnection;
 }

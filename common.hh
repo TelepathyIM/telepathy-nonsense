@@ -11,8 +11,8 @@
 
 */
 
-#ifndef QXMPP_COMMON_HPP
-#define QXMPP_COMMON_HPP
+#ifndef COMMON_HH
+#define COMMON_HH
 
 #define DBG qDebug() << "ENTERING " << Q_FUNC_INFO
 
@@ -24,4 +24,4 @@ public:
     static Tp::AvatarSpec getAvatarSpec();
 };
 
-#endif // QXMPP_CONNECTION_HPP
+#endif // COMMON_HH

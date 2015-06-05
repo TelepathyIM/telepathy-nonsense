@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.freedesktop.Telepathy.ConnectionManager.qxmpp
-Exec=@CMAKE_INSTALL_FULL_LIBEXECDIR@/telepathy-qxmpp

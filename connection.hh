@@ -12,8 +12,8 @@
 
 */
 
-#ifndef QXMPP_CONNECTION_HPP
-#define QXMPP_CONNECTION_HPP
+#ifndef CONNECTION_HH
+#define CONNECTION_HH
 
 #include <TelepathyQt/BaseConnection>
 #include <TelepathyQt/BaseChannel>
@@ -88,4 +88,4 @@ private:
     QMap<QString, QString> m_avatarTokens;
 };
 
-#endif // QXMPP_CONNECTION_HPP
+#endif // CONNECTION_HH

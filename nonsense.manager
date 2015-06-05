@@ -1,0 +1,13 @@
+[ConnectionManager]
+Name = nonsense
+BusName = org.freedesktop.Telepathy.ConnectionManager.nonsense
+ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/nonsense
+
+[Protocol xmpp]
+param-account = s required
+param-server = s required
+param-resource = s required
+VCardField=impp
+EnglishName=XMPP
+Icon=im-jabber
+

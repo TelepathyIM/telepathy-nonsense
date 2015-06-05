@@ -12,8 +12,8 @@
 
 */
 
-#ifndef QXMPP_PROTOCOL_HPP
-#define QXMPP_PROTOCOL_HPP
+#ifndef PROTOCOL_HH
+#define PROTOCOL_HH
 
 #include <TelepathyQt/BaseProtocol>
 
@@ -42,4 +42,4 @@ private:
 
 };
 
-#endif // QXMPP_PROTOCOL_HPP
+#endif // PROTOCOL_HH

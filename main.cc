@@ -22,14 +22,14 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName(QLatin1String("telepathy-qxmpp"));
+    app.setApplicationName(QLatin1String("telepathy-nonsense"));
 
     Tp::registerTypes();
     Tp::enableDebug(true);
     Tp::enableWarnings(true);
 
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<Protocol>(QLatin1String("xmpp"));
-    Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("qxmpp"));
+    Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QLatin1String("nonsense"));
 
     cm->addProtocol(proto);
     cm->registerObject();

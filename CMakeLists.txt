@@ -1,9 +1,9 @@
-project(telepathy-qxmpp)
+project(telepathy-nonsense)
 
 cmake_minimum_required(VERSION 2.8)
 
-set (telepathy_qxmpp_VERSION_MAJOR 0)
-set (telepathy_qxmpp_VERSION_MINOR 1)
+set (telepathy_nonsense_VERSION_MAJOR 0)
+set (telepathy_nonsense_VERSION_MINOR 1)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -25,7 +25,7 @@ include(GNUInstallDirs)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-set(qxmpp_SOURCES
+set(nonsense_SOURCES
     main.cc
     common.cc
     common.hh
@@ -39,17 +39,17 @@ set(qxmpp_SOURCES
     uniquehandlemap.hh
 )
 
-add_executable(telepathy-qxmpp ${qxmpp_SOURCES})
+add_executable(telepathy-nonsense ${nonsense_SOURCES})
 
-set_target_properties(telepathy-qxmpp PROPERTIES AUTOMOC TRUE)
+set_target_properties(telepathy-nonsense PROPERTIES AUTOMOC TRUE)
 
 if (USE_QT4)
-    target_include_directories(telepathy-qxmpp PRIVATE
+    target_include_directories(telepathy-nonsense PRIVATE
         ${QT_INCLUDES}
         ${TELEPATHY_QT4_INCLUDE_DIR}
         ${QXMPP_INCLUDE_DIR}
     )
-    target_link_libraries(telepathy-qxmpp
+    target_link_libraries(telepathy-nonsense
         ${QT_QTCORE_LIBRARY}
         ${QT_QTDBUS_LIBRARY}
         ${QT_QTNETWORK_LIBRARY}
@@ -59,11 +59,11 @@ if (USE_QT4)
         ${QXMPP_LIBRARIES}
     )
 else()
-    target_include_directories(telepathy-qxmpp PRIVATE
+    target_include_directories(telepathy-nonsense PRIVATE
         ${TELEPATHY_QT5_INCLUDE_DIR}
         ${QXMPP_INCLUDE_DIR}
     )
-    target_link_libraries(telepathy-qxmpp
+    target_link_libraries(telepathy-nonsense
         Qt5::Core
         Qt5::DBus
         Qt5::Network
@@ -73,20 +73,20 @@ else()
     )
 endif()
 
-configure_file(qxmpp.service.in org.freedesktop.Telepathy.ConnectionManager.qxmpp.service)
-configure_file(telepathy-qxmpp-config.h.in telepathy-qxmpp-config.h)
+configure_file(nonsense.service.in org.freedesktop.Telepathy.ConnectionManager.nonsense.service)
+configure_file(telepathy-nonsense-config.h.in telepathy-nonsense-config.h)
 
 install(
-    TARGETS telepathy-qxmpp
+    TARGETS telepathy-nonsense
     DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}
 )
 
 install(
-    FILES qxmpp.manager
+    FILES nonsense.manager
     DESTINATION share/telepathy/managers
 )
 
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Telepathy.ConnectionManager.qxmpp.service
+    ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Telepathy.ConnectionManager.nonsense.service
     DESTINATION share/dbus-1/services
 )

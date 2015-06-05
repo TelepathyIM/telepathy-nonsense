@@ -11,8 +11,8 @@
 
 */
 
-#ifndef QXMPP_UNIQUEHANDLEMAP_HPP
-#define QXMPP_UNIQUEHANDLEMAP_HPP
+#ifndef UNIQUEHANDLEMAP_HH
+#define UNIQUEHANDLEMAP_HH
 
 #include <QString>
 #include <TelepathyQt/Types>
@@ -29,4 +29,4 @@ private:
     QStringList m_knownHandles;
 };
 
-#endif // QXMPP_UNIQUEHANDLEMAP_HPP
+#endif // UNIQUEHANDLEMAP_HH
