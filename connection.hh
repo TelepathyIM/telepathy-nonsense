@@ -77,6 +77,8 @@ private slots:
     void onClientVCardReceived();
 
 private:
+    void updateAvatar(const QByteArray &photo, const QString &jid, const QString &type);
+
     Tp::BaseConnectionContactsInterfacePtr m_contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr m_simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr m_contactListIface;

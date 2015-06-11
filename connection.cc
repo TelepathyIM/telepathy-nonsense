@@ -165,7 +165,7 @@ void Connection::saslStartMechanismWithData(const QString &mechanism, const QByt
 
     m_saslIface->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
 
-    m_clientConfig.setPassword(data);
+    m_clientConfig.setPassword(QString::fromUtf8(data));
 
     m_client->connectToServer(m_clientConfig, m_clientPresence);
 }
@@ -195,7 +195,7 @@ void Connection::onConnected()
     m_clientPresence = m_client->clientPresence();
     m_client->vCardManager().requestClientVCard();
     if (m_clientPresence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
-        m_avatarTokens[m_uniqueHandleMap[selfHandle()]] = m_clientPresence.photoHash();
+        m_avatarTokens[m_uniqueHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
     }
 }
 
@@ -275,7 +275,7 @@ void Connection::onPresenceReceived(const QXmppPresence &presence)
     m_simplePresenceIface->setPresences(presences);
 
     if (presence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
-        m_avatarTokens[jid] = presence.photoHash();
+        m_avatarTokens[jid] = QString::fromLatin1(presence.photoHash());
     }
 }
 
@@ -686,17 +686,20 @@ void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *erro
 void Connection::onVCardReceived(QXmppVCardIq iq)
 {
     DBG;
-    QByteArray photoHash = QCryptographicHash::hash(iq.photo(), QCryptographicHash::Sha1);
-    m_avatarTokens[QXmppUtils::jidToBareJid(iq.from())] = photoHash;
-    m_avatarsIface->avatarRetrieved(m_uniqueHandleMap[QXmppUtils::jidToBareJid(iq.from())], photoHash, iq.photo(), iq.photoType());
+    updateAvatar(iq.photo(), QXmppUtils::jidToBareJid(iq.from()), iq.photoType());
 }
 
 void Connection::onClientVCardReceived()
 {
     DBG;
-    QByteArray photoHash = QCryptographicHash::hash(m_client->vCardManager().clientVCard().photo(), QCryptographicHash::Sha1);
-    m_avatarTokens[m_clientConfig.jidBare()] = photoHash;
-    m_avatarsIface->avatarRetrieved(selfHandle(), photoHash, m_client->vCardManager().clientVCard().photo(), m_client->vCardManager().clientVCard().photoType());
+    updateAvatar(m_client->vCardManager().clientVCard().photo(), m_clientConfig.jidBare(), m_client->vCardManager().clientVCard().photoType());
+}
+
+void Connection::updateAvatar(const QByteArray &photo, const QString &jid, const QString &type)
+{
+    QString photoHash = QString::fromLatin1(QCryptographicHash::hash(photo, QCryptographicHash::Sha1));
+    m_avatarTokens[jid] = photoHash;
+    m_avatarsIface->avatarRetrieved(m_uniqueHandleMap[jid], photoHash, photo, type);
 }
 
 Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles, Tp::DBusError *error)
@@ -736,7 +739,7 @@ void Connection::clearAvatar(Tp::DBusError *error)
     presence.setFrom(m_clientConfig.jid());
     m_client->sendPacket(presence);
 
-    m_avatarTokens[m_clientConfig.jidBare()] = QString("");
+    m_avatarTokens[m_clientConfig.jidBare()] = QLatin1String("");
 }
 
 QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error)
@@ -756,9 +759,9 @@ QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype,
     presence.setFrom(m_clientConfig.jid());
     m_client->sendPacket(presence);
 
-    m_avatarTokens[m_clientConfig.jidBare()] = hash;
+    m_avatarTokens[m_clientConfig.jidBare()] = QString::fromLatin1(hash);
 
-    return hash;
+    return QString::fromLatin1(hash);
 }
 
 QPointer<QXmppClient> Connection::qxmppClient() const

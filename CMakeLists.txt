@@ -8,6 +8,7 @@ set (telepathy_nonsense_VERSION_MINOR 1)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
+add_definitions(-DQT_NO_CAST_FROM_ASCII)
 
 if (USE_QT4)
     find_package(TelepathyQt4 0.9.6 REQUIRED)
