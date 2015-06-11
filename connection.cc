@@ -146,15 +146,23 @@ void Connection::doConnect(Tp::DBusError *error)
     Tp::BaseChannelServerAuthenticationTypePtr authType = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    m_saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"), false, true, QString(), QString(), QString(), false);
-    m_saslIface->setStartMechanismWithDataCallback( Tp::memFun(this, &Connection::saslStartMechanismWithData));
+    m_saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+                                                                     /* hasInitialData */ false,
+                                                                     /* canTryAgain */ true,
+                                                                     /* authorizationIdentity */ m_client->configuration().jid(),
+                                                                     /* defaultUsername */ QString(),
+                                                                     /* defaultRealm */ m_client->configuration().domain(),
+                                                                     /* maySaveResponse */ true);
+
+    m_saslIface->setStartMechanismWithDataCallback(Tp::memFun(this, &Connection::saslStartMechanismWithData));
 
     baseChannel->setRequested(false);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_saslIface));
 
     baseChannel->registerObject(&saslError);
-    if (!saslError.isValid())
+    if (!saslError.isValid()) {
         addChannel(baseChannel);
+    }
 }
 
 void Connection::saslStartMechanismWithData(const QString &mechanism, const QByteArray &data, Tp::DBusError *error)
