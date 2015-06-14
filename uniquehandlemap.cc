@@ -40,3 +40,8 @@ uint UniqueHandleMap::operator[] (const QString &bareJid)
     m_knownHandles.append(bareJid);
     return m_knownHandles.size();
 }
+
+bool UniqueHandleMap::contains(const QString &bareJid) const
+{
+    return m_knownHandles.contains(bareJid, Qt::CaseInsensitive);
+}

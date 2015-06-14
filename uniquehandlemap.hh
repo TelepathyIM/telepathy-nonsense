@@ -29,6 +29,8 @@ public:
     const QString operator[] (const uint handle);
     uint operator[] (const QString &bareJid);
 
+    bool contains(const QString &bareJid) const;
+
 private:
     QStringList m_knownHandles;
 };
