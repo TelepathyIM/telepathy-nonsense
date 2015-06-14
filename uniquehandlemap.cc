@@ -26,7 +26,7 @@ const QString UniqueHandleMap::operator[] (const uint handle)
     return m_knownHandles[handle - 1];
 }
 
-uint UniqueHandleMap::operator[] (const QString& bareJid)
+uint UniqueHandleMap::operator[] (const QString &bareJid)
 {
     int idx = m_knownHandles.indexOf(bareJid);
     if (idx != -1) {

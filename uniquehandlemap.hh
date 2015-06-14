@@ -14,8 +14,7 @@
 #ifndef UNIQUEHANDLEMAP_HH
 #define UNIQUEHANDLEMAP_HH
 
-#include <QString>
-#include <TelepathyQt/Types>
+#include <QStringList>
 
 class UniqueHandleMap
 {
@@ -23,7 +22,7 @@ public:
     UniqueHandleMap();
 
     const QString operator[] (const uint handle);
-    uint operator[] (const QString& bareJid);
+    uint operator[] (const QString &bareJid);
 
 private:
     QStringList m_knownHandles;
