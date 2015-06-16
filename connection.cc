@@ -23,6 +23,8 @@
 #include "common.hh"
 #include "telepathy-nonsense-config.h"
 
+#define DEBUG_STANZAS 0
+
 Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters), m_client (0)
 {
@@ -116,6 +118,13 @@ void Connection::doConnect(Tp::DBusError *error)
     m_client->versionManager().setClientVersion(telepathy_nonsense_VERSION_STRING);
 #if QT_VERSION >= 0x050000
     m_client->versionManager().setClientOs(QSysInfo::prettyProductName());
+#endif
+
+#if DEBUG_STANZAS
+    QXmppLogger *logger = new QXmppLogger();
+    logger->setLoggingType(QXmppLogger::StdoutLogging);
+    logger->setMessageTypes(QXmppLogger::AnyMessage);
+    m_client->setLogger(logger);
 #endif
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
