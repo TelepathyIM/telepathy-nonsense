@@ -22,9 +22,11 @@
 #include <QXmppVersionManager.h>
 #include <QXmppUtils.h>
 #include <QXmppPresence.h>
+#include <QXmppTransferManager.h>
 
 #include "connection.hh"
 #include "textchannel.hh"
+#include "filetransferchannel.hh"
 #include "common.hh"
 #include "telepathy-nonsense-config.h"
 
@@ -40,7 +42,26 @@ Tp::RequestableChannelClass createRequestableChannelClassText()
     return text;
 }
 
+Tp::RequestableChannelClass createRequestableChannelClassFileTransfer()
+{
+    Tp::RequestableChannelClass fileTransfer;
+    fileTransfer.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
+    fileTransfer.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".ContentHashType"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentType")); /* TODO: QXmpp only supports SI file transfers with MD5 hash */
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Filename"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Size"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentHash"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Description"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Date"));
+    fileTransfer.allowedProperties.append(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".URI"));
+    return fileTransfer;
+}
+
 static const Tp::RequestableChannelClass requestableChannelClassText = createRequestableChannelClassText();
+static const Tp::RequestableChannelClass requestableChannelClassFileTransfer = createRequestableChannelClassFileTransfer();
 
 Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters), m_client (0)
@@ -96,6 +117,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     /* Connection.Interface.Requests */
     m_requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     m_requestsIface->requestableChannelClasses << requestableChannelClassText;
+    m_requestsIface->requestableChannelClasses << requestableChannelClassFileTransfer;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_requestsIface));
 
     QString myJid = parameters.value(QLatin1String("account")).toString();
@@ -157,8 +179,13 @@ void Connection::doConnect(Tp::DBusError *error)
         }
     }
 
+    /* Enable extensions */
     m_discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
     m_discoveryManager->setClientType(clientType);
+
+    QXmppTransferManager *transferManager = new QXmppTransferManager;
+    m_client->addExtension(transferManager);
+    connect(transferManager, SIGNAL(fileReceived(QXmppTransferJob *)), this, SLOT(onFileReceived(QXmppTransferJob *)));
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
  //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
@@ -641,6 +668,7 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
 
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
 
+    bool requested = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".Requested")).toBool();
     uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
     uint targetHandle = 0;
     QString targetID;
@@ -673,10 +701,14 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
 
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
     baseChannel->setTargetID(targetID);
+    baseChannel->setRequested(requested);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
         TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+    } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER) {
+        FileTransferChannelPtr fileTransferChannel = FileTransferChannel::create(this, baseChannel.data(), request);
+        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(fileTransferChannel));
     }
 
     return baseChannel;
@@ -714,6 +746,45 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     }
 
     textChannel->onMessageReceived(message);
+}
+
+void Connection::onFileReceived(QXmppTransferJob *job)
+{
+    DBG;
+    uint initiatorHandle, targetHandle;
+
+    initiatorHandle = targetHandle = m_uniqueHandleMap[QXmppUtils::jidToBareJid(job->jid())];
+    setLastResource(QXmppUtils::jidToBareJid(job->jid()), QXmppUtils::jidToResource(job->jid()));
+
+    Tp::DBusError error;
+
+    QVariantMap request;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeContact;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentType")] = QStringLiteral("application/octet-stream"); /* QXmpp does not report the mime type (yet) */
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Filename")] = job->fileName();
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Size")] = job->fileSize();
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentHashType")] = Tp::FileHashTypeMD5; /* QXmpp only supports SI file transfers with MD5 hash */
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".ContentHash")] = job->fileHash();
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Description")] = job->fileInfo().description();
+    request[TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER + QLatin1String(".Date")] = job->fileDate();
+    request[NONSENSE_XMPP_TRANSFER_JOB] = QVariant::fromValue(job);
+
+    Tp::BaseChannelPtr channel = createChannel(request, false /* suppressHandler */, &error);
+
+    if (error.isValid()) {
+        qWarning() << "createChannel failed:" << error.name() << " " << error.message();
+        return;
+    }
+
+    FileTransferChannelPtr fileTransferChannel = FileTransferChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER));
+
+    if (!fileTransferChannel) {
+        qDebug() << "Error, channel is not a FileTransferChannel?";
+        return;
+    }
 }
 
 void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *error)

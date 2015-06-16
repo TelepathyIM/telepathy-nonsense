@@ -30,6 +30,7 @@ set(nonsense_SOURCES
     main.cc
     common.cc
     connection.cc
+    filetransferchannel.cc
     protocol.cc
     textchannel.cc
     uniquehandlemap.cc

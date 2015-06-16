@@ -27,6 +27,7 @@
 #include <QXmppVCardIq.h>
 #include <QXmppMessage.h>
 #include <QXmppDiscoveryManager.h>
+#include <QXmppTransferManager.h>
 
 #include "uniquehandlemap.hh"
 
@@ -74,6 +75,7 @@ private slots:
     void onDisconnected();
     void onError(QXmppClient::Error error);
     void onMessageReceived(const QXmppMessage &message);
+    void onFileReceived(QXmppTransferJob *job);
     void onPresenceReceived(const QXmppPresence &presence);
 //     void onIqReceived(const QXmppIq &iq);
 //     void onStateChanged(QXmppClient::State state);
