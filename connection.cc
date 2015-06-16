@@ -629,7 +629,7 @@ Tp::BaseChannelPtr Connection::createChannel(const QVariantMap &request, Tp::DBu
     baseChannel->setTargetID(targetID);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        TextChannelPtr textChannel = TextChannel::create(m_client, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
+        TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     }
 
@@ -641,6 +641,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     uint initiatorHandle, targetHandle;
 
     initiatorHandle = targetHandle = m_uniqueHandleMap[QXmppUtils::jidToBareJid(message.from())];
+    setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
@@ -758,4 +759,34 @@ QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype,
     m_avatarTokens[m_clientConfig.jidBare()] = hash;
 
     return hash;
+}
+
+QPointer<QXmppClient> Connection::qxmppClient() const
+{
+    return m_client;
+}
+
+QString Connection::lastResourceForJid(const QString &jid, bool force)
+{
+    QStringList resourceList = m_client->rosterManager().getResources(jid);
+    QString resource = m_lastResources[jid];
+    if (!resourceList.contains(resource)) {
+        if (force) {
+            Q_ASSERT(!resourceList.isEmpty());
+            resource = m_lastResources[jid] = resourceList[0];;
+        } else {
+            resource = m_lastResources[jid] = QString();
+        }
+    }
+
+    if (!resource.isEmpty()) {
+        return QStringLiteral("/") + resource;
+    } else {
+        return resource;
+    }
+}
+
+void Connection::setLastResource(const QString &jid, const QString &resource)
+{
+    m_lastResources[jid] = resource;
 }

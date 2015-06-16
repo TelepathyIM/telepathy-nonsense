@@ -14,10 +14,11 @@
 
 #include "textchannel.hh"
 #include "common.hh"
+#include "connection.hh"
 
-TextChannel::TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
+TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
     : Tp::BaseChannelTextType(baseChannel),
-      m_client(client),
+      m_connection(connection),
       m_contactHandle(baseChannel->targetHandle()),
       m_contactJid(baseChannel->targetID()),
       m_selfHandle(selfHandle),
@@ -48,9 +49,9 @@ TextChannel::TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 }
 
-TextChannelPtr TextChannel::create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
+TextChannelPtr TextChannel::create(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
 {
-    return TextChannelPtr(new TextChannel(client, baseChannel, selfHandle, selfJid));
+    return TextChannelPtr(new TextChannel(connection, baseChannel, selfHandle, selfJid));
 }
 
 QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
@@ -58,8 +59,8 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     uint outFlags = 0;
     QUuid messageToken;
     QXmppMessage message;
-    message.setTo(m_contactJid);
-    message.setFrom(m_selfJid);
+    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
+    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
     message.setId(messageToken.toString());
 
     if (flags & (Tp::MessageSendingFlagReportDelivery | Tp::MessageSendingFlagReportRead)) {
@@ -78,7 +79,7 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     }
     message.setBody(content);
 
-    m_client->sendPacket(message);
+    m_connection->qxmppClient()->sendPacket(message);
     return messageToken.toString();
 }
 
@@ -141,12 +142,12 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         QUuid outMessageToken;
         QXmppMessage outMessage;
         outMessage.setMarker(QXmppMessage::Received);
-        outMessage.setTo(m_contactJid);
-        outMessage.setFrom(m_selfJid);
+        outMessage.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
+        outMessage.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
         outMessage.setMarkerId(message.id());
         outMessage.setId(outMessageToken.toString());
 
-        m_client->sendPacket(outMessage);
+        m_connection->qxmppClient()->sendPacket(outMessage);
     }
 
     /* Text message */
@@ -169,12 +170,12 @@ void TextChannel::messageAcknowledged(const QString &messageId)
     QUuid messageToken;
     QXmppMessage message;
     message.setMarker(QXmppMessage::Displayed);
-    message.setTo(m_contactJid);
-    message.setFrom(m_selfJid);
+    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid)); //TODO: Should we make sure that we send the "displayed" ack to the same resource as the "received" ack?
+    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
     message.setId(messageToken.toString());
     message.setMarkerId(messageId);
 
-    m_client->sendPacket(message);
+    m_connection->qxmppClient()->sendPacket(message);
 }
 
 void TextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -202,9 +203,9 @@ void TextChannel::setChatState(uint state, Tp::DBusError *error)
     default:
         Q_ASSERT(0);
     }
-    message.setTo(m_contactJid);
-    message.setFrom(m_selfJid);
+    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
+    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource()); //TODO: read XEP wrt resource
     message.setId(messageToken.toString());
 
-    m_client->sendPacket(message);
+    m_connection->qxmppClient()->sendPacket(message);
 }

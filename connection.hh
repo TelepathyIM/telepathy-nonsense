@@ -32,6 +32,10 @@ public:
             const QString &cmName, const QString &protocolName,
             const QVariantMap &parameters);
 
+    QPointer<QXmppClient> qxmppClient() const;
+    QString lastResourceForJid(const QString &jid, bool force = false);
+    void setLastResource(const QString &jid, const QString &resource);
+
 private:
     void doConnect(Tp::DBusError *error);
 
@@ -86,6 +90,7 @@ private:
     QXmppConfiguration m_clientConfig;
     UniqueHandleMap m_uniqueHandleMap;
     QMap<QString, QString> m_avatarTokens;
+    QMap<QString, QString> m_lastResources;
 };
 
 #endif // CONNECTION_HH

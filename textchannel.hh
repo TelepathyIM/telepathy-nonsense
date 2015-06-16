@@ -17,10 +17,10 @@
 
 #include <TelepathyQt/BaseChannel>
 
-#include <QXmppClient.h>
 #include <QXmppMessage.h>
 
 class TextChannel;
+class Connection;
 
 typedef Tp::SharedPtr<TextChannel> TextChannelPtr;
 
@@ -28,13 +28,13 @@ class TextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static TextChannelPtr create(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
+    static TextChannelPtr create(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
 
 public slots:
     void onMessageReceived(const QXmppMessage &message);
 
 private:
-    TextChannel(QXmppClient *client, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
+    TextChannel(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
     QString sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
     void setChatState(uint state, Tp::DBusError *error);
     void messageAcknowledged(const QString &messageId);
@@ -43,7 +43,7 @@ private:
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
     Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
 
-    QPointer<QXmppClient> m_client;
+    Connection *m_connection;
     uint m_contactHandle;
     QString m_contactJid;
     uint m_selfHandle;
