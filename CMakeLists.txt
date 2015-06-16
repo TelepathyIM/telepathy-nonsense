@@ -28,15 +28,10 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 set(nonsense_SOURCES
     main.cc
     common.cc
-    common.hh
     connection.cc
-    connection.hh
     protocol.cc
-    protocol.hh
     textchannel.cc
-    textchannel.hh
     uniquehandlemap.cc
-    uniquehandlemap.hh
 )
 
 add_executable(telepathy-nonsense ${nonsense_SOURCES})
