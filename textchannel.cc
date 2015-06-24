@@ -57,7 +57,7 @@ TextChannelPtr TextChannel::create(Connection *connection, Tp::BaseChannel *base
 QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
     uint outFlags = 0;
-    QUuid messageToken;
+    QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
     message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
@@ -139,7 +139,7 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
 
     /* Send receipt */
     if (message.isReceiptRequested()) {
-        QUuid outMessageToken;
+        QUuid outMessageToken = QUuid::createUuid();
         QXmppMessage outMessage;
         outMessage.setMarker(QXmppMessage::Received);
         outMessage.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
@@ -167,7 +167,7 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
 
 void TextChannel::messageAcknowledged(const QString &messageId)
 {
-    QUuid messageToken;
+    QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
     message.setMarker(QXmppMessage::Displayed);
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid)); //TODO: Should we make sure that we send the "displayed" ack to the same resource as the "received" ack?
@@ -182,7 +182,7 @@ void TextChannel::setChatState(uint state, Tp::DBusError *error)
 {
     Q_UNUSED(error);
 
-    QUuid messageToken;
+    QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
     switch (state) {
     case Tp::ChannelChatStateActive:
