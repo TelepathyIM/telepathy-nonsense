@@ -780,7 +780,7 @@ QString Connection::lastResourceForJid(const QString &jid, bool force)
     }
 
     if (!resource.isEmpty()) {
-        return QStringLiteral("/") + resource;
+        return QLatin1Char('/') + resource;
     } else {
         return resource;
     }

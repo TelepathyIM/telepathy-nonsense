@@ -60,7 +60,7 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     QUuid messageToken;
     QXmppMessage message;
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
+    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
     message.setId(messageToken.toString());
 
     if (flags & (Tp::MessageSendingFlagReportDelivery | Tp::MessageSendingFlagReportRead)) {
@@ -143,7 +143,7 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         QXmppMessage outMessage;
         outMessage.setMarker(QXmppMessage::Received);
         outMessage.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-        outMessage.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
+        outMessage.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
         outMessage.setMarkerId(message.id());
         outMessage.setId(outMessageToken.toString());
 
@@ -171,7 +171,7 @@ void TextChannel::messageAcknowledged(const QString &messageId)
     QXmppMessage message;
     message.setMarker(QXmppMessage::Displayed);
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid)); //TODO: Should we make sure that we send the "displayed" ack to the same resource as the "received" ack?
-    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource());
+    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
     message.setId(messageToken.toString());
     message.setMarkerId(messageId);
 
@@ -204,7 +204,7 @@ void TextChannel::setChatState(uint state, Tp::DBusError *error)
         Q_ASSERT(0);
     }
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-    message.setFrom(m_selfJid + QStringLiteral("/") + m_connection->qxmppClient()->configuration().resource()); //TODO: read XEP wrt resource
+    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource()); //TODO: read XEP wrt resource
     message.setId(messageToken.toString());
 
     m_connection->qxmppClient()->sendPacket(message);
