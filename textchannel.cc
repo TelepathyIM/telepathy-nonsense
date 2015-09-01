@@ -87,7 +87,9 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
 {
     Tp::MessagePart header;
     header[QLatin1String("message-token")] = QDBusVariant(message.id());
-    header[QLatin1String("message-sent")]  = QDBusVariant(message.stamp());
+    if (message.stamp().isValid()) {
+        header[QLatin1String("message-sent")]  = QDBusVariant(message.stamp().toMSecsSinceEpoch() / 1000);
+    }
     header[QLatin1String("message-received")]  = QDBusVariant(QDateTime::currentMSecsSinceEpoch() / 1000);
     header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
     header[QLatin1String("message-sender-id")] = QDBusVariant(m_contactJid);
