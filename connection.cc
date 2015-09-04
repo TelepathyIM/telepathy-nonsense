@@ -101,7 +101,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
 
     setConnectCallback(Tp::memFun(this, &Connection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &Connection::inspectHandles));
-    setCreateChannelCallback(Tp::memFun(this, &Connection::createChannel));
+    setCreateChannelCallback(Tp::memFun(this, &Connection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &Connection::requestHandles));
     connect(this, SIGNAL(disconnected()), SLOT(doDisconnect()));
 }
@@ -597,7 +597,7 @@ void Connection::unpublish(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 }
 
-Tp::BaseChannelPtr Connection::createChannel(const QVariantMap &request, Tp::DBusError *error)
+Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::DBusError *error)
 {
     DBG;
 
