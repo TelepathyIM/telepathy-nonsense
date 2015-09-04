@@ -34,6 +34,7 @@ public:
 
     QPointer<QXmppClient> qxmppClient() const;
     QString lastResourceForJid(const QString &jid, bool force = false);
+    QString bestResourceForJid(const QString &jid) const;
     void setLastResource(const QString &jid, const QString &resource);
 
 private:

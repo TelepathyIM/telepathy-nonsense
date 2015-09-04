@@ -779,22 +779,37 @@ QPointer<QXmppClient> Connection::qxmppClient() const
 
 QString Connection::lastResourceForJid(const QString &jid, bool force)
 {
-    QStringList resourceList = m_client->rosterManager().getResources(jid);
     QString resource = m_lastResources[jid];
-    if (!resourceList.contains(resource)) {
+    if (resource.isEmpty() || !m_client->rosterManager().getResources(jid).contains(resource)) {
         if (force) {
-            Q_ASSERT(!resourceList.isEmpty());
-            resource = m_lastResources[jid] = resourceList[0];;
+            return bestResourceForJid(jid);
         } else {
-            resource = m_lastResources[jid] = QString();
+            m_lastResources.remove(jid);
+            return QString();
         }
     }
 
-    if (!resource.isEmpty()) {
-        return QLatin1Char('/') + resource;
-    } else {
-        return resource;
+    return QLatin1Char('/') + resource;
+}
+
+QString Connection::bestResourceForJid(const QString &jid) const
+{
+    const QStringList resources = m_client->rosterManager().getResources(jid);
+    if (resources.isEmpty()) {
+        return QString();
     }
+
+    QString resource;
+    int highestPriority = m_client->rosterManager().getPresence(jid, resources.first()).priority();
+    for (int i = 1; i < resources.count(); ++i) {
+        const int priority = m_client->rosterManager().getPresence(jid, resources.at(i)).priority();
+        if (priority > highestPriority) {
+            highestPriority = priority;
+            resource = resources.at(i);
+        }
+    }
+
+    return QLatin1Char('/') + resource;
 }
 
 void Connection::setLastResource(const QString &jid, const QString &resource)
