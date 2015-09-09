@@ -275,6 +275,11 @@ uint Connection::setPresence(const QString &status, const QString &message, Tp::
 void Connection::onPresenceReceived(const QXmppPresence &presence)
 {
     QString jid = QXmppUtils::jidToBareJid(presence.from());
+
+    if (jid == m_clientConfig.jidBare()) {
+        return; // Ignore presence update from another resource of current account.
+    }
+
     QMap<QString, QXmppPresence> receivedPresence;
     receivedPresence.insert(jid, presence);
 
