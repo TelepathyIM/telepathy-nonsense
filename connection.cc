@@ -23,6 +23,7 @@
 #include <QXmppUtils.h>
 #include <QXmppPresence.h>
 #include <QXmppTransferManager.h>
+#include <QXmppConstants.h>
 
 #include "connection.hh"
 #include "textchannel.hh"
@@ -73,6 +74,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &Connection::getContactAttributes));
     m_contactsIface->setContactAttributeInterfaces(QStringList()
                                                    << TP_QT_IFACE_CONNECTION
+                                                   << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
@@ -104,6 +106,11 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_aliasingIface->setGetAliasesCallback(Tp::memFun(this, &Connection::getAliases));
     m_aliasingIface->setSetAliasesCallback(Tp::memFun(this, &Connection::setAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_aliasingIface));
+
+    /* Connection.Interface.ContactCapabilities */
+    m_contactCapabilitiesIface = Tp::BaseConnectionContactCapabilitiesInterface::create();
+    m_contactCapabilitiesIface->setGetContactCapabilitiesCallback(Tp::memFun(this, &Connection::getContactCapabilities));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactCapabilitiesIface));
 
     /* Connection.Interface.Avatars */
     m_avatarsIface = Tp::BaseConnectionAvatarsInterface::create();
@@ -182,6 +189,8 @@ void Connection::doConnect(Tp::DBusError *error)
     /* Enable extensions */
     m_discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
     m_discoveryManager->setClientType(clientType);
+    connect(m_discoveryManager, SIGNAL(infoReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryInfoReceived(QXmppDiscoveryIq)));
+    m_contactsFeatures[m_uniqueHandleMap[selfHandle()]] = m_discoveryManager->capabilities().features();
 
     QXmppTransferManager *transferManager = new QXmppTransferManager;
     m_client->addExtension(transferManager);
@@ -350,6 +359,37 @@ void Connection::onPresenceReceived(const QXmppPresence &presence)
     if (presence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
         m_avatarTokens[jid] = QString::fromLatin1(presence.photoHash());
     }
+
+    qDebug() << "capability hash:" << presence.capabilityHash();
+    qDebug() << "capability node and verification:" << presence.capabilityNode() << presence.capabilityVer().toBase64();
+    qDebug() << "capability extensions:" << presence.capabilityExt();
+
+    if (!presence.capabilityVer().isEmpty()) {
+//        QString nodeWithVerification = presence.capabilityNode() + QLatin1Char('#') + QString::fromLatin1(presence.capabilityVer().toBase64());
+
+        qDebug() << Q_FUNC_INFO << "Request info from" << presence.from();
+        m_discoveryManager->requestInfo(presence.from());
+    }
+}
+
+void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
+{
+    DBG;
+
+    qDebug() << iq.queryNode();
+    qDebug() << iq.type() << iq.queryType();
+    qDebug() << iq.from() << iq.to();
+    qDebug() << iq.features();
+    qDebug().noquote() << iq.verificationString().toBase64();
+
+    m_contactsFeatures[iq.from()] = iq.features();
+
+    QString bareJid = QXmppUtils::jidToBareJid(iq.from());
+    if (bareJid + lastResourceForJid(bareJid, /* force */ true) == iq.from()) {
+        Tp::DBusError error;
+        Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueHandleMap[bareJid], &error);
+        m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
+    }
 }
 
 // void Connection::onStateChanged(QXmppClient::State state)
@@ -383,6 +423,10 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
         QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(bareJid);
         QVariantMap attributes;
 
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES)) {
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES + QLatin1String("/capabilities")] = QVariant::fromValue(getContactCapabilities(Tp::UIntList() << handle, error).value(handle));
+        }
+
         if (bareJid == m_clientConfig.jidBare()) {
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = bareJid;
 
@@ -406,6 +450,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
             }
         } else if (bareJids.contains(bareJid)) {
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = bareJid;
+
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 switch (rosterIq.subscriptionType()) {
@@ -879,6 +924,33 @@ QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype,
     m_avatarTokens[m_clientConfig.jidBare()] = QString::fromLatin1(hash);
 
     return QString::fromLatin1(hash);
+}
+
+Tp::ContactCapabilitiesMap Connection::getContactCapabilities(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    Tp::ContactCapabilitiesMap capabilities;
+
+    const QStringList contactJids = inspectHandles(Tp::HandleTypeContact, contacts, error);
+    if (error->isValid()) {
+        return capabilities;
+    }
+
+    for (int i = 0; i < contacts.count(); ++i) {
+        Tp::RequestableChannelClassList channelClassList;
+        channelClassList << requestableChannelClassText; // Text channels supported by everyone.
+
+        const QString fullJid = contactJids.at(i) + lastResourceForJid(contactJids.at(i), /* force */ true);
+        const QStringList caps = m_contactsFeatures.value(fullJid);
+
+        if (caps.contains(QString::fromLatin1(ns_stream_initiation_file_transfer))) {
+            channelClassList << requestableChannelClassFileTransfer;
+        } else {
+            qDebug() << "Contact" << fullJid << "caps:" << caps;
+        }
+        capabilities[contacts.at(i)] = channelClassList;
+    }
+
+    return capabilities;
 }
 
 QPointer<QXmppClient> Connection::qxmppClient() const

@@ -66,6 +66,8 @@ private:
     void clearAvatar(Tp::DBusError *error);
     QString setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error);
 
+    Tp::ContactCapabilitiesMap getContactCapabilities(const Tp::UIntList &contacts, Tp::DBusError *error);
+
     Tp::SimplePresence toTpPresence(QMap<QString, QXmppPresence> presences);
 
 private slots:
@@ -80,6 +82,8 @@ private slots:
 //     void onIqReceived(const QXmppIq &iq);
 //     void onStateChanged(QXmppClient::State state);
 
+    void onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq);
+
     void onRosterReceived();
 
     void onVCardReceived(QXmppVCardIq);
@@ -92,6 +96,7 @@ private:
     Tp::BaseConnectionSimplePresenceInterfacePtr m_simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr m_contactListIface;
     Tp::BaseConnectionAliasingInterfacePtr m_aliasingIface;
+    Tp::BaseConnectionContactCapabilitiesInterfacePtr m_contactCapabilitiesIface;
     Tp::BaseConnectionAvatarsInterfacePtr m_avatarsIface;
     Tp::BaseConnectionRequestsInterfacePtr m_requestsIface;
     Tp::BaseChannelSASLAuthenticationInterfacePtr m_saslIface;
@@ -103,6 +108,7 @@ private:
     UniqueHandleMap m_uniqueHandleMap;
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
+    QMap<QString, QStringList> m_contactsFeatures;
 };
 
 #endif // CONNECTION_HH
