@@ -804,8 +804,8 @@ QString Connection::bestResourceForJid(const QString &jid) const
         return QString();
     }
 
-    QString resource;
-    int highestPriority = m_client->rosterManager().getPresence(jid, resources.first()).priority();
+    QString resource = resources.first();
+    int highestPriority = m_client->rosterManager().getPresence(jid, resource).priority();
     for (int i = 1; i < resources.count(); ++i) {
         const int priority = m_client->rosterManager().getPresence(jid, resources.at(i)).priority();
         if (priority > highestPriority) {
