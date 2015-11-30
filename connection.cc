@@ -20,6 +20,7 @@
 #include <QXmppRosterManager.h>
 #include <QXmppVCardManager.h>
 #include <QXmppVersionManager.h>
+#include <QXmppDiscoveryManager.h>
 #include <QXmppUtils.h>
 #include <QXmppPresence.h>
 
@@ -131,6 +132,29 @@ void Connection::doConnect(Tp::DBusError *error)
     logger->setMessageTypes(QXmppLogger::AnyMessage);
     m_client->setLogger(logger);
 #endif
+
+    /* Try to set the device type. For now, we will try to query the hostnamed
+     * dbus interface and assume "pc" if that fails. It would be great if
+     * QSysInfo would provide this functionality. */
+    QString clientType = QLatin1String("pc");
+    QDBusInterface hostnameInterface(QLatin1String("org.freedesktop.hostname1"),
+                                     QLatin1String("/org/freedesktop/hostname1"),
+                                     QLatin1String("org.freedesktop.hostname1"),
+                                     QDBusConnection::systemBus());
+    QVariant chassisReply = hostnameInterface.property("Chassis");
+    if (chassisReply.isValid()) {
+        auto chassisType = chassisReply.toString();
+        /* This is the best mapping that I can think of... */
+        if (chassisType == QLatin1String("tablet")) {
+            clientType = QLatin1String("handheld");
+        } else if (chassisType == QLatin1String("handset")) {
+            clientType = QLatin1String("phone");
+        }
+    }
+    auto discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
+    if (discoveryManager) {
+        discoveryManager->setClientType(clientType);
+    }
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
  //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
