@@ -83,6 +83,7 @@ private slots:
 //     void onStateChanged(QXmppClient::State state);
 
     void onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq);
+    void onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq);
 
     void onRosterReceived();
 

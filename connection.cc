@@ -190,6 +190,7 @@ void Connection::doConnect(Tp::DBusError *error)
     m_discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
     m_discoveryManager->setClientType(clientType);
     connect(m_discoveryManager, SIGNAL(infoReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryInfoReceived(QXmppDiscoveryIq)));
+    connect(m_discoveryManager, SIGNAL(itemsReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryItemsReceived(QXmppDiscoveryIq)));
     m_contactsFeatures[m_uniqueHandleMap[selfHandle()]] = m_discoveryManager->capabilities().features();
 
     QXmppTransferManager *transferManager = new QXmppTransferManager;
@@ -274,6 +275,8 @@ void Connection::onConnected()
     if (m_clientPresence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
         m_avatarTokens[m_uniqueHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
     }
+
+    m_discoveryManager->requestItems(m_clientConfig.domain());
 }
 
 void Connection::onDisconnected()
@@ -382,13 +385,31 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
     qDebug() << iq.features();
     qDebug().noquote() << iq.verificationString().toBase64();
 
-    m_contactsFeatures[iq.from()] = iq.features();
+    for (auto &identity : iq.identities()) {
+        if (identity.category() == QLatin1String("client")) {
+            m_contactsFeatures[iq.from()] = iq.features();
 
-    QString bareJid = QXmppUtils::jidToBareJid(iq.from());
-    if (bareJid + lastResourceForJid(bareJid, /* force */ true) == iq.from()) {
-        Tp::DBusError error;
-        Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueHandleMap[bareJid], &error);
-        m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
+            QString bareJid = QXmppUtils::jidToBareJid(iq.from());
+            if (bareJid + lastResourceForJid(bareJid, /* force */ true) == iq.from()) {
+                Tp::DBusError error;
+                Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueHandleMap[bareJid], &error);
+                m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
+            }
+        } else if (identity.category() == QLatin1String("proxy")) {
+            if (identity.type() == QLatin1String("bytestreams")) {
+                qDebug() << "Found proxy with JID" << iq.from();
+                QXmppTransferManager *transferManager = m_client->findExtension<QXmppTransferManager>();
+                transferManager->setProxy(iq.from());
+            }
+        }
+    }
+}
+
+void Connection::onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq)
+{
+    DBG;
+    for (auto &item : iq.items()) {
+        m_discoveryManager->requestInfo(item.jid(), item.node());
     }
 }
 
