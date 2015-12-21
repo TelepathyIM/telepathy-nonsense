@@ -110,6 +110,7 @@ private:
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
     QMap<QString, QStringList> m_contactsFeatures;
+    QList<QString> m_serverEntities;
 };
 
 #endif // CONNECTION_HH

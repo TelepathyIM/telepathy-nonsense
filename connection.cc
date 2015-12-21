@@ -276,6 +276,7 @@ void Connection::onConnected()
         m_avatarTokens[m_uniqueHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
     }
 
+    m_serverEntities.push_back(m_clientConfig.domain());
     m_discoveryManager->requestItems(m_clientConfig.domain());
 }
 
@@ -396,7 +397,7 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
                 m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
             }
         } else if (identity.category() == QLatin1String("proxy")) {
-            if (identity.type() == QLatin1String("bytestreams")) {
+            if (identity.type() == QLatin1String("bytestreams") && m_serverEntities.contains(iq.from())) {
                 qDebug() << "Found proxy with JID" << iq.from();
                 QXmppTransferManager *transferManager = m_client->findExtension<QXmppTransferManager>();
                 transferManager->setProxy(iq.from());
@@ -409,7 +410,10 @@ void Connection::onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq)
 {
     DBG;
     for (auto &item : iq.items()) {
-        m_discoveryManager->requestInfo(item.jid(), item.node());
+        if (m_serverEntities.contains(iq.from())) {
+            m_serverEntities.push_back(item.jid());
+            m_discoveryManager->requestInfo(item.jid(), item.node());
+        }
     }
 }
 
