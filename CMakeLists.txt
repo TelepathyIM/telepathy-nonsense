@@ -79,10 +79,10 @@ install(
 
 install(
     FILES nonsense.manager
-    DESTINATION share/telepathy/managers
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/telepathy/managers
 )
 
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Telepathy.ConnectionManager.nonsense.service
-    DESTINATION share/dbus-1/services
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/services
 )
