@@ -26,6 +26,7 @@
 #include <QXmppClient.h>
 #include <QXmppVCardIq.h>
 #include <QXmppMessage.h>
+#include <QXmppDiscoveryManager.h>
 
 #include "uniquehandlemap.hh"
 
@@ -94,6 +95,7 @@ private:
     Tp::BaseChannelSASLAuthenticationInterfacePtr m_saslIface;
 
     QPointer<QXmppClient> m_client;
+    QXmppDiscoveryManager *m_discoveryManager;
     QXmppPresence m_clientPresence;
     QXmppConfiguration m_clientConfig;
     UniqueHandleMap m_uniqueHandleMap;

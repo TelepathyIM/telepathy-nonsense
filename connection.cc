@@ -20,7 +20,6 @@
 #include <QXmppRosterManager.h>
 #include <QXmppVCardManager.h>
 #include <QXmppVersionManager.h>
-#include <QXmppDiscoveryManager.h>
 #include <QXmppUtils.h>
 #include <QXmppPresence.h>
 
@@ -151,10 +150,9 @@ void Connection::doConnect(Tp::DBusError *error)
             clientType = QLatin1String("phone");
         }
     }
-    auto discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
-    if (discoveryManager) {
-        discoveryManager->setClientType(clientType);
-    }
+
+    m_discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
+    m_discoveryManager->setClientType(clientType);
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
  //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
