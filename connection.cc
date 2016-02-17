@@ -37,7 +37,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     DBG;
 
     /* Connection.Interface.Contacts */
-    m_contactsIface = Tp::BaseConnectionContactsInterface::create(this);
+    m_contactsIface = Tp::BaseConnectionContactsInterface::create();
     m_contactsIface->setGetContactAttributesCallback(Tp::memFun(this, &Connection::getContactAttributes));
     m_contactsIface->setContactAttributeInterfaces(QStringList()
                                                    << TP_QT_IFACE_CONNECTION
