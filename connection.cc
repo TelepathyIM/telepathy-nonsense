@@ -30,6 +30,18 @@
 
 #define DEBUG_STANZAS 0
 
+Tp::RequestableChannelClass createRequestableChannelClassText()
+{
+    Tp::RequestableChannelClass text;
+    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
+    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    return text;
+}
+
+static const Tp::RequestableChannelClass requestableChannelClassText = createRequestableChannelClassText();
+
 Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
     Tp::BaseConnection(dbusConnection, cmName, protocolName, parameters), m_client (0)
 {
@@ -83,13 +95,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
 
     /* Connection.Interface.Requests */
     m_requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
-    /* Fill requestableChannelClasses */
-    Tp::RequestableChannelClass text;
-    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
-    text.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeContact;
-    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
-    text.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
-    m_requestsIface->requestableChannelClasses << text;
+    m_requestsIface->requestableChannelClasses << requestableChannelClassText;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_requestsIface));
 
     QString myJid = parameters.value(QLatin1String("account")).toString();
