@@ -103,7 +103,7 @@ private:
     QXmppDiscoveryManager *m_discoveryManager;
     QXmppPresence m_clientPresence;
     QXmppConfiguration m_clientConfig;
-    UniqueHandleMap m_uniqueHandleMap;
+    UniqueHandleMap m_uniqueContactHandleMap;
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
     QMap<QString, QStringList> m_contactsFeatures;

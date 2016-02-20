@@ -151,7 +151,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
         m_clientConfig.setStreamSecurityMode(QXmppConfiguration::StreamSecurityMode::TLSEnabled);
     }
     m_clientPresence.setPriority(priority);
-    setSelfContact(m_uniqueHandleMap[myJid], myJid);
+    setSelfContact(m_uniqueContactHandleMap[myJid], myJid);
 
     setConnectCallback(Tp::memFun(this, &Connection::doConnect));
     setInspectHandlesCallback(Tp::memFun(this, &Connection::inspectHandles));
@@ -287,7 +287,7 @@ void Connection::onConnected()
     m_clientPresence = m_client->clientPresence();
     m_client->vCardManager().requestClientVCard();
     if (m_clientPresence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
-        m_avatarTokens[m_uniqueHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
+        m_avatarTokens[m_uniqueContactHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
     }
 
     m_serverEntities.push_back(m_clientConfig.domain());
@@ -365,7 +365,7 @@ void Connection::onPresenceReceived(const QXmppPresence &presence)
     receivedPresence.insert(jid, presence);
 
     Tp::SimpleContactPresences presences;
-    presences[m_uniqueHandleMap[jid]] = toTpPresence(receivedPresence);
+    presences[m_uniqueContactHandleMap[jid]] = toTpPresence(receivedPresence);
     m_simplePresenceIface->setPresences(presences);
 
     if (presence.vCardUpdateType() == QXmppPresence::VCardUpdateValidPhoto) {
@@ -401,7 +401,7 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
             QString bareJid = QXmppUtils::jidToBareJid(iq.from());
             if (bareJid + lastResourceForJid(bareJid, /* force */ true) == iq.from()) {
                 Tp::DBusError error;
-                Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueHandleMap[bareJid], &error);
+                Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueContactHandleMap[bareJid], &error);
                 m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
             }
         } else if (identity.category() == QLatin1String("proxy")) {
@@ -433,7 +433,7 @@ Tp::ContactAttributesMap Connection::getContactListAttributes(const QStringList 
     Tp::UIntList handles;
 
     for (auto jid : m_client->rosterManager().getRosterBareJids()) {
-        handles.append(m_uniqueHandleMap[jid]);
+        handles.append(m_uniqueContactHandleMap[jid]);
     }
 
     return getContactAttributes(handles, interfaces, error);
@@ -448,7 +448,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
     QStringList bareJids = m_client->rosterManager().getRosterBareJids();
 
     for (auto handle : handles) {
-        QString bareJid = m_uniqueHandleMap[handle];
+        QString bareJid = m_uniqueContactHandleMap[handle];
         QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(bareJid);
         QVariantMap attributes;
 
@@ -593,7 +593,7 @@ Tp::AliasMap Connection::getAliases(const Tp::UIntList &handles, Tp::DBusError *
     Tp::AliasMap aliases;
 
     for (uint handle : handles) {
-        aliases[handle] = m_client->rosterManager().getRosterEntry(m_uniqueHandleMap[handle]).name();
+        aliases[handle] = m_client->rosterManager().getRosterEntry(m_uniqueContactHandleMap[handle]).name();
     }
 
     return aliases;
@@ -603,7 +603,7 @@ void Connection::setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error)
 {
     DBG;
     for(Tp::AliasMap::const_iterator it = aliases.begin(); it != aliases.end(); it++) {
-        m_client->rosterManager().getRosterEntry(m_uniqueHandleMap[it.key()]).setName(it.value());
+        m_client->rosterManager().getRosterEntry(m_uniqueContactHandleMap[it.key()]).setName(it.value());
     }
 }
 
@@ -624,7 +624,7 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
     QStringList result;
 
     for (uint handle : handles) {
-        QString bareJid = m_uniqueHandleMap[handle];
+        QString bareJid = m_uniqueContactHandleMap[handle];
         if (bareJid.isEmpty()) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
             return QStringList();
@@ -648,7 +648,7 @@ Tp::UIntList Connection::requestHandles(uint handleType, const QStringList &iden
     }
 
     for(auto &identifier : identifiers) {
-        result.append(m_uniqueHandleMap[identifier]);
+        result.append(m_uniqueContactHandleMap[identifier]);
     }
 
     return result;
@@ -666,8 +666,8 @@ void Connection::requestSubscription(const Tp::UIntList &handles, const QString 
     }
 
     for (auto handle : handles) {
-        m_client->rosterManager().addItem(m_uniqueHandleMap[handle]); //TODO: Is adding the contact here the right thing to do?
-        m_client->rosterManager().subscribe(m_uniqueHandleMap[handle], message);
+        m_client->rosterManager().addItem(m_uniqueContactHandleMap[handle]); //TODO: Is adding the contact here the right thing to do?
+        m_client->rosterManager().subscribe(m_uniqueContactHandleMap[handle], message);
     }
 }
 
@@ -685,8 +685,8 @@ void Connection::removeContacts(const Tp::UIntList &handles, Tp::DBusError *erro
     Tp::HandleIdentifierMap identifiers;
     Tp::HandleIdentifierMap removals;
     for (uint handle : handles) {
-        m_client->rosterManager().removeItem(m_uniqueHandleMap[handle]);
-        removals[handle] = m_uniqueHandleMap[handle];
+        m_client->rosterManager().removeItem(m_uniqueContactHandleMap[handle]);
+        removals[handle] = m_uniqueContactHandleMap[handle];
     }
     m_contactListIface->contactsChangedWithID(changes, identifiers, removals);
 }
@@ -702,7 +702,7 @@ void Connection::authorizePublication(const Tp::UIntList &handles, Tp::DBusError
     }
 
     for (uint handle : handles) {
-        m_client->rosterManager().acceptSubscription(m_uniqueHandleMap[handle]);
+        m_client->rosterManager().acceptSubscription(m_uniqueContactHandleMap[handle]);
     }
 }
 
@@ -717,7 +717,7 @@ void Connection::unsubscribe(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 
     for (uint handle : handles) {
-        m_client->rosterManager().unsubscribe(m_uniqueHandleMap[handle]);
+        m_client->rosterManager().unsubscribe(m_uniqueContactHandleMap[handle]);
     }
 }
 
@@ -732,7 +732,7 @@ void Connection::unpublish(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 
     for (uint handle : handles) {
-        m_client->rosterManager().refuseSubscription(m_uniqueHandleMap[handle]);
+        m_client->rosterManager().refuseSubscription(m_uniqueContactHandleMap[handle]);
     }
 }
 
@@ -751,10 +751,10 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
     case Tp::HandleTypeContact:
         if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
             targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
-            targetID = m_uniqueHandleMap[targetHandle];
+            targetID = m_uniqueContactHandleMap[targetHandle];
         } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
             targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
-            targetHandle = m_uniqueHandleMap[targetID];
+            targetHandle = m_uniqueContactHandleMap[targetID];
         }
         break;
     default:
@@ -791,7 +791,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
 {
     uint initiatorHandle, targetHandle;
 
-    initiatorHandle = targetHandle = m_uniqueHandleMap[QXmppUtils::jidToBareJid(message.from())];
+    initiatorHandle = targetHandle = m_uniqueContactHandleMap[QXmppUtils::jidToBareJid(message.from())];
     setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
 
     //TODO: initiator should be group creator
@@ -826,7 +826,7 @@ void Connection::onFileReceived(QXmppTransferJob *job)
     DBG;
     uint initiatorHandle, targetHandle;
 
-    initiatorHandle = targetHandle = m_uniqueHandleMap[QXmppUtils::jidToBareJid(job->jid())];
+    initiatorHandle = targetHandle = m_uniqueContactHandleMap[QXmppUtils::jidToBareJid(job->jid())];
     setLastResource(QXmppUtils::jidToBareJid(job->jid()), QXmppUtils::jidToResource(job->jid()));
 
     Tp::DBusError error;
@@ -869,7 +869,7 @@ void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *erro
     }
 
     for (uint handle : handles) {
-        m_client->vCardManager().requestVCard(m_uniqueHandleMap[handle]);
+        m_client->vCardManager().requestVCard(m_uniqueContactHandleMap[handle]);
     }
 }
 
@@ -889,7 +889,7 @@ void Connection::updateAvatar(const QByteArray &photo, const QString &jid, const
 {
     QString photoHash = QString::fromLatin1(QCryptographicHash::hash(photo, QCryptographicHash::Sha1));
     m_avatarTokens[jid] = photoHash;
-    m_avatarsIface->avatarRetrieved(m_uniqueHandleMap[jid], photoHash, photo, type);
+    m_avatarsIface->avatarRetrieved(m_uniqueContactHandleMap[jid], photoHash, photo, type);
 }
 
 Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles, Tp::DBusError *error)
@@ -905,8 +905,8 @@ Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles,
 
     Tp::AvatarTokenMap result;
     for (uint handle : handles) {
-        if (!m_avatarTokens[m_uniqueHandleMap[handle]].isEmpty()) {
-            result.insert(handle, m_avatarTokens[m_uniqueHandleMap[handle]]);
+        if (!m_avatarTokens[m_uniqueContactHandleMap[handle]].isEmpty()) {
+            result.insert(handle, m_avatarTokens[m_uniqueContactHandleMap[handle]]);
         }
     }
 
