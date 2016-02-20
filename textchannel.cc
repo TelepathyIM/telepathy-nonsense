@@ -24,13 +24,10 @@
 TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
-      m_contactHandle(baseChannel->targetHandle()),
-      m_contactJid(baseChannel->targetID())
+      m_targetHandle(baseChannel->targetHandle()),
+      m_targetJid(baseChannel->targetID())
 {
     DBG;
-
-    m_selfJid = connection->qxmppClient()->configuration().jidBare();
-
     QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal
                                                << Tp::ChannelTextMessageTypeDeliveryReport;
@@ -63,8 +60,8 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
 {
     QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
-    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
+    message.setTo(targetJid());
+    message.setFrom(selfJid());
     message.setId(messageToken.toString());
 
     if (flags & (Tp::MessageSendingFlagReportDelivery | Tp::MessageSendingFlagReportRead)) {
@@ -82,11 +79,16 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     }
     message.setBody(content);
 
-    m_connection->qxmppClient()->sendPacket(message);
+    sendQXmppMessage(message);
     return messageToken.toString();
 }
 
 void TextChannel::onMessageReceived(const QXmppMessage &message)
+{
+    processReceivedMessage(message, m_targetHandle, m_targetJid);
+}
+
+void TextChannel::processReceivedMessage(const QXmppMessage &message, uint senderHandle, const QString &senderID)
 {
     Tp::MessagePart header;
     header[QLatin1String("message-token")] = QDBusVariant(message.id());
@@ -94,8 +96,8 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         header[QLatin1String("message-sent")]  = QDBusVariant(message.stamp().toMSecsSinceEpoch() / 1000);
     }
     header[QLatin1String("message-received")]  = QDBusVariant(QDateTime::currentMSecsSinceEpoch() / 1000);
-    header[QLatin1String("message-sender")]    = QDBusVariant(m_contactHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(m_contactJid);
+    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
+    header[QLatin1String("message-sender-id")] = QDBusVariant(senderID);
 
     /* Handle chat states */
     if (message.state() != QXmppMessage::None) {
@@ -119,7 +121,7 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         default:
             Q_ASSERT(0);
         }
-        m_chatStateIface->chatStateChanged(m_contactHandle, state);
+        m_chatStateIface->chatStateChanged(senderHandle, state);
     }
 
     /* Handle chat markers */
@@ -147,12 +149,12 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         QUuid outMessageToken = QUuid::createUuid();
         QXmppMessage outMessage;
         outMessage.setMarker(QXmppMessage::Received);
-        outMessage.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-        outMessage.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
+        outMessage.setTo(message.from());
+        outMessage.setFrom(selfJid());
         outMessage.setMarkerId(message.id());
         outMessage.setId(outMessageToken.toString());
 
-        m_connection->qxmppClient()->sendPacket(outMessage);
+        sendQXmppMessage(outMessage);
     }
 
     /* Text message */
@@ -170,17 +172,32 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
     }
 }
 
+bool TextChannel::sendQXmppMessage(QXmppMessage &message)
+{
+    return m_connection->qxmppClient()->sendPacket(message);
+}
+
+QString TextChannel::targetJid() const
+{
+    return m_targetJid + m_connection->lastResourceForJid(m_targetJid);
+}
+
+QString TextChannel::selfJid() const
+{
+    return m_connection->qxmppClient()->configuration().jid();
+}
+
 void TextChannel::messageAcknowledged(const QString &messageId)
 {
     QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
     message.setMarker(QXmppMessage::Displayed);
-    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid)); //TODO: Should we make sure that we send the "displayed" ack to the same resource as the "received" ack?
-    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource());
+    message.setTo(targetJid()); //TODO: Should we make sure that we send the "displayed" ack to the same resource as the "received" ack?
+    message.setFrom(selfJid());
     message.setId(messageToken.toString());
     message.setMarkerId(messageId);
 
-    m_connection->qxmppClient()->sendPacket(message);
+    sendQXmppMessage(message);
 }
 
 void TextChannel::setChatState(uint state, Tp::DBusError *error)
@@ -208,9 +225,9 @@ void TextChannel::setChatState(uint state, Tp::DBusError *error)
     default:
         Q_ASSERT(0);
     }
-    message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
-    message.setFrom(m_selfJid + QLatin1Char('/') + m_connection->qxmppClient()->configuration().resource()); //TODO: read XEP wrt resource
+    message.setTo(targetJid());
+    message.setFrom(selfJid());
     message.setId(messageToken.toString());
 
-    m_connection->qxmppClient()->sendPacket(message);
+    sendQXmppMessage(message);
 }

@@ -36,22 +36,27 @@ public:
     static TextChannelPtr create(Connection *connection, Tp::BaseChannel *baseChannel);
 
 public slots:
-    void onMessageReceived(const QXmppMessage &message);
+    virtual void onMessageReceived(const QXmppMessage &message);
 
-private:
+protected:
     TextChannel(Connection *connection, Tp::BaseChannel *baseChannel);
     QString sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
     void setChatState(uint state, Tp::DBusError *error);
     void messageAcknowledged(const QString &messageId);
 
-private:
+    void processReceivedMessage(const QXmppMessage &message, uint senderHandle, const QString &senderID);
+
+    virtual bool sendQXmppMessage(QXmppMessage &message);
+    virtual QString targetJid() const;
+    virtual QString selfJid() const;
+
+protected:
     Tp::BaseChannelMessagesInterfacePtr m_messagesIface;
     Tp::BaseChannelChatStateInterfacePtr m_chatStateIface;
 
     Connection *m_connection;
-    uint m_contactHandle;
-    QString m_contactJid;
-    QString m_selfJid;
+    uint m_targetHandle;
+    QString m_targetJid;
 };
 
 #endif // TEXTCHANNEL_HH
