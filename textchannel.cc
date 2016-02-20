@@ -21,15 +21,15 @@
 #include "common.hh"
 #include "connection.hh"
 
-TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
+TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
       m_contactHandle(baseChannel->targetHandle()),
-      m_contactJid(baseChannel->targetID()),
-      m_selfHandle(selfHandle),
-      m_selfJid(selfJid)
+      m_contactJid(baseChannel->targetID())
 {
     DBG;
+
+    m_selfJid = connection->qxmppClient()->configuration().jidBare();
 
     QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal
@@ -54,9 +54,9 @@ TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel, u
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_chatStateIface));
 }
 
-TextChannelPtr TextChannel::create(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid)
+TextChannelPtr TextChannel::create(Connection *connection, Tp::BaseChannel *baseChannel)
 {
-    return TextChannelPtr(new TextChannel(connection, baseChannel, selfHandle, selfJid));
+    return TextChannelPtr(new TextChannel(connection, baseChannel));
 }
 
 QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)

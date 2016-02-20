@@ -777,7 +777,7 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
     baseChannel->setRequested(requested);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data(), selfHandle(), m_clientConfig.jidBare());
+        TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data());
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
     } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER) {
         FileTransferChannelPtr fileTransferChannel = FileTransferChannel::create(this, baseChannel.data(), request);

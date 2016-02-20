@@ -33,13 +33,13 @@ class TextChannel : public Tp::BaseChannelTextType
 {
     Q_OBJECT
 public:
-    static TextChannelPtr create(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
+    static TextChannelPtr create(Connection *connection, Tp::BaseChannel *baseChannel);
 
 public slots:
     void onMessageReceived(const QXmppMessage &message);
 
 private:
-    TextChannel(Connection *connection, Tp::BaseChannel *baseChannel, uint selfHandle, const QString &selfJid);
+    TextChannel(Connection *connection, Tp::BaseChannel *baseChannel);
     QString sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error);
     void setChatState(uint state, Tp::DBusError *error);
     void messageAcknowledged(const QString &messageId);
@@ -51,7 +51,6 @@ private:
     Connection *m_connection;
     uint m_contactHandle;
     QString m_contactJid;
-    uint m_selfHandle;
     QString m_selfJid;
 };
 
