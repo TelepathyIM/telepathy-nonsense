@@ -43,6 +43,16 @@ Tp::RequestableChannelClass createRequestableChannelClassText()
     return text;
 }
 
+Tp::RequestableChannelClass createRequestableChannelClassGroupChat()
+{
+    Tp::RequestableChannelClass groupChat;
+    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
+    groupChat.fixedProperties[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")]  = Tp::HandleTypeRoom;
+    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"));
+    groupChat.allowedProperties.append(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"));
+    return groupChat;
+}
+
 Tp::RequestableChannelClass createRequestableChannelClassFileTransfer()
 {
     Tp::RequestableChannelClass fileTransfer;
@@ -62,6 +72,7 @@ Tp::RequestableChannelClass createRequestableChannelClassFileTransfer()
 }
 
 static const Tp::RequestableChannelClass requestableChannelClassText = createRequestableChannelClassText();
+static const Tp::RequestableChannelClass requestableChannelClassGroupChat = createRequestableChannelClassGroupChat();
 static const Tp::RequestableChannelClass requestableChannelClassFileTransfer = createRequestableChannelClassFileTransfer();
 
 Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmName, const QString &protocolName, const QVariantMap &parameters) :
@@ -131,6 +142,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     /* Connection.Interface.Requests */
     m_requestsIface = Tp::BaseConnectionRequestsInterface::create(this);
     m_requestsIface->requestableChannelClasses << requestableChannelClassText;
+    m_requestsIface->requestableChannelClasses << requestableChannelClassGroupChat;
     m_requestsIface->requestableChannelClasses << requestableChannelClassFileTransfer;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_requestsIface));
 
