@@ -191,11 +191,14 @@ void Connection::doConnect(Tp::DBusError *error)
     m_discoveryManager->setClientType(clientType);
     connect(m_discoveryManager, SIGNAL(infoReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryInfoReceived(QXmppDiscoveryIq)));
     connect(m_discoveryManager, SIGNAL(itemsReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryItemsReceived(QXmppDiscoveryIq)));
-    m_contactsFeatures[m_uniqueHandleMap[selfHandle()]] = m_discoveryManager->capabilities().features();
 
     QXmppTransferManager *transferManager = new QXmppTransferManager;
     m_client->addExtension(transferManager);
     connect(transferManager, SIGNAL(fileReceived(QXmppTransferJob *)), this, SLOT(onFileReceived(QXmppTransferJob *)));
+
+    /* The features for ourself must only be added after adding all QXmpp
+     * extensions - we would miss features otherwise */
+    m_contactsFeatures[m_clientConfig.jid()] = m_discoveryManager->capabilities().features();
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
  //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
