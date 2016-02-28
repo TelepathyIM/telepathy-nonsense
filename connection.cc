@@ -130,6 +130,9 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     QString myJid = parameters.value(QLatin1String("account")).toString();
     //QString server = parameters.value(QLatin1String("server")).toString();
     QString resource = parameters.value(QLatin1String("resource")).toString();
+    if (resource.isEmpty()) {
+        resource = QUuid::createUuid().toString();
+    }
     uint priority = parameters.value(QLatin1String("priority")).toUInt();
     m_clientConfig.setJid(myJid);
     m_clientConfig.setResource(resource);
