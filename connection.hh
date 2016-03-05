@@ -74,13 +74,10 @@ private slots:
     void doDisconnect();
 
     void onConnected();
-    void onDisconnected();
     void onError(QXmppClient::Error error);
     void onMessageReceived(const QXmppMessage &message);
     void onFileReceived(QXmppTransferJob *job);
     void onPresenceReceived(const QXmppPresence &presence);
-//     void onIqReceived(const QXmppIq &iq);
-//     void onStateChanged(QXmppClient::State state);
 
     void onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq);
     void onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq);

@@ -208,12 +208,9 @@ void Connection::doConnect(Tp::DBusError *error)
     m_contactsFeatures[m_clientConfig.jid()] = m_discoveryManager->capabilities().features();
 
     connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
- //   connect(m_client, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
     connect(m_client, SIGNAL(error(QXmppClient::Error)), this, SLOT(onError(QXmppClient::Error)));
     connect(m_client, SIGNAL(messageReceived(const QXmppMessage &)), this, SLOT(onMessageReceived(const QXmppMessage &)));
     connect(m_client, SIGNAL(presenceReceived(const QXmppPresence &)), this, SLOT(onPresenceReceived(const QXmppPresence &)));
- //   connect(m_client, SIGNAL(iqReceived(const QXmppIq &)), this, SLOT(onIqReceived(const QXmppIq &)));
-//     connect(m_client, SIGNAL(stateChanged(QXmppClient::State)), this, SLOT(onStateChanged(QXmppClient::State)));
 
     connect(&m_client->rosterManager(), SIGNAL(rosterReceived()), this, SLOT(onRosterReceived()));
 
@@ -288,14 +285,6 @@ void Connection::onConnected()
 
     m_serverEntities.push_back(m_clientConfig.domain());
     m_discoveryManager->requestItems(m_clientConfig.domain());
-}
-
-void Connection::onDisconnected()
-{
-//     DBG;
-// 
-//     //TODO reason?
-//     setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonRequested);
 }
 
 void Connection::onError(QXmppClient::Error error)
@@ -428,10 +417,6 @@ void Connection::onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq)
         }
     }
 }
-
-// void Connection::onStateChanged(QXmppClient::State state)
-// {
-// }
 
 Tp::ContactAttributesMap Connection::getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error)
 {
