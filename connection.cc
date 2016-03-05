@@ -128,13 +128,17 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_requestsIface));
 
     QString myJid = parameters.value(QLatin1String("account")).toString();
-    //QString server = parameters.value(QLatin1String("server")).toString();
+    QString server = parameters.value(QLatin1String("server")).toString();
     QString resource = parameters.value(QLatin1String("resource")).toString();
     if (resource.isEmpty()) {
+        /* Make sure that the resource is a non-empty string */
         resource = QUuid::createUuid().toString();
     }
     uint priority = parameters.value(QLatin1String("priority")).toUInt();
     m_clientConfig.setJid(myJid);
+    if (!server.isEmpty()) {
+        m_clientConfig.setHost(server);
+    }
     m_clientConfig.setResource(resource);
     m_clientConfig.setAutoAcceptSubscriptions(false);
     m_clientConfig.setAutoReconnectionEnabled(false);
