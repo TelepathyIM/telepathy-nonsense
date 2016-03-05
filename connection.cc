@@ -297,7 +297,7 @@ void Connection::onError(QXmppClient::Error error)
     } else if (error == QXmppClient::XmppStreamError) {
         QXmppStanza::Error::Condition xmppStreamError = m_client->xmppStreamError();
         if (xmppStreamError == QXmppStanza::Error::NotAuthorized) {
-            setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
+            m_saslIface->setSaslStatus(Tp::SASLStatusServerFailed, QLatin1String("ServerFailed"), QVariantMap());
         } else {
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNoneSpecified);
         }
