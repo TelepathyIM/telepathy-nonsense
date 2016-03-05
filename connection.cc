@@ -135,6 +135,8 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
         resource = QUuid::createUuid().toString();
     }
     uint priority = parameters.value(QLatin1String("priority")).toUInt();
+    bool requireEncryption = parameters.value(QLatin1String("require-encryption")).toBool();
+    bool ignoreSslErrors = parameters.value(QLatin1String("ignore-ssl-errors")).toBool();
     m_clientConfig.setJid(myJid);
     if (!server.isEmpty()) {
         m_clientConfig.setHost(server);
@@ -142,7 +144,12 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_clientConfig.setResource(resource);
     m_clientConfig.setAutoAcceptSubscriptions(false);
     m_clientConfig.setAutoReconnectionEnabled(false);
-    m_clientConfig.setIgnoreSslErrors(false);
+    m_clientConfig.setIgnoreSslErrors(ignoreSslErrors);
+    if (requireEncryption) {
+        m_clientConfig.setStreamSecurityMode(QXmppConfiguration::StreamSecurityMode::TLSRequired);
+    } else {
+        m_clientConfig.setStreamSecurityMode(QXmppConfiguration::StreamSecurityMode::TLSEnabled);
+    }
     m_clientPresence.setPriority(priority);
     setSelfContact(m_uniqueHandleMap[myJid], myJid);
 
