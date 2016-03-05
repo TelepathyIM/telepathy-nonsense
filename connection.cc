@@ -755,7 +755,6 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
         }
         return Tp::BaseChannelPtr();
-        break;
     }
 
     if (targetID.isEmpty()) {
