@@ -19,7 +19,6 @@
 
 UniqueHandleMap::UniqueHandleMap()
 {
-
 }
 
 const QString UniqueHandleMap::operator[] (const uint handle)

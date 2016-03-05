@@ -307,12 +307,14 @@ void Connection::onError(QXmppClient::Error error)
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
     } else if (error == QXmppClient::XmppStreamError) {
         QXmppStanza::Error::Condition xmppStreamError = m_client->xmppStreamError();
-        if (xmppStreamError == QXmppStanza::Error::NotAuthorized)
+        if (xmppStreamError == QXmppStanza::Error::NotAuthorized) {
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonAuthenticationFailed);
-        else
+        } else {
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNoneSpecified);
-    } else
+        }
+    } else {
         Q_ASSERT(0);
+    }
 }
 
 void Connection::onRosterReceived()
