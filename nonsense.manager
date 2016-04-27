@@ -4,16 +4,18 @@ BusName = org.freedesktop.Telepathy.ConnectionManager.nonsense
 ObjectPath = /org/freedesktop/Telepathy/ConnectionManager/nonsense
 
 [Protocol xmpp]
-param-account=s required
+param-account=s required register
+param-password=s register secret
 param-server=s
+param-register=b
 param-resource=s
 param-priority=n
 param-require-encryption=b
 param-ignore-ssl-errors=b
+default-register=false
 default-priority=0
 default-require-encryption=true
 default-ignore-ssl-errors=false
 VCardField=impp
 EnglishName=XMPP
 Icon=im-jabber
-
