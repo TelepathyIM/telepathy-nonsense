@@ -448,16 +448,16 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
     QStringList bareJids = m_client->rosterManager().getRosterBareJids();
 
     for (auto handle : handles) {
-        QString bareJid = m_uniqueContactHandleMap[handle];
-        QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(bareJid);
+        QString contactJid = m_uniqueContactHandleMap[handle];
+        QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(contactJid);
         QVariantMap attributes;
 
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES)) {
             attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES + QLatin1String("/capabilities")] = QVariant::fromValue(getContactCapabilities(Tp::UIntList() << handle, error).value(handle));
         }
 
-        if (bareJid == m_clientConfig.jidBare()) {
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = bareJid;
+        if (contactJid == m_clientConfig.jidBare()) {
+            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
@@ -465,20 +465,20 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(QMap<QString, QXmppPresence>({{bareJid, m_client->clientPresence()}})));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(QMap<QString, QXmppPresence>({{contactJid, m_client->clientPresence()}})));
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(bareJid);
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(contactJid);
             }
 
             if (m_client && m_client->isConnected()) {
                 if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[bareJid]);
+                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[contactJid]);
                 }
             }
-        } else if (bareJids.contains(bareJid)) {
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = bareJid;
+        } else if (bareJids.contains(contactJid)) {
+            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
 
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
@@ -509,7 +509,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(m_client->rosterManager().getAllPresencesForBareJid(bareJid)));
+                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(m_client->rosterManager().getAllPresencesForBareJid(contactJid)));
             }
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
@@ -518,7 +518,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
 
             if (m_client && m_client->isConnected()) {
                 if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
-                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[bareJid]);
+                    attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[contactJid]);
                 }
             }
         }
