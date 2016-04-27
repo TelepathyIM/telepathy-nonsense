@@ -44,11 +44,16 @@ Protocol::Protocol(const QDBusConnection &dbusConnection, const QString &name)
     setIdentifyAccountCallback(Tp::memFun(this, &Protocol::identifyAccount));
     setNormalizeContactCallback(Tp::memFun(this, &Protocol::normalizeContact));
 
-    setParameters(Tp::ProtocolParameterList() << Tp::ProtocolParameter(QLatin1String("account"), QDBusSignature(QLatin1String("s")), 0)//Tp::ConnMgrParamFlagRequired | Tp::ConnMgrParamFlagRegister)
-                                              //<< Tp::ProtocolParameter(QLatin1String("password"), QDBusSignature(QLatin1String("s")), Tp::ConnMgrParamFlagSecret) // | Tp::ConnMgrParamFlagRequired | Tp::ConnMgrParamFlagRegister)
-                                              //<< Tp::ProtocolParameter(QLatin1String("server"), QDBusSignature(QLatin1String("s")), 0) //Tp::ConnMgrParamFlagRequired | Tp::ConnMgrParamFlagRegister)
-                                              << Tp::ProtocolParameter(QLatin1String("resource"), QDBusSignature(QLatin1String("s")), 0) //Tp::ConnMgrParamFlagRequired)
-                                              << Tp::ProtocolParameter(QLatin1String("priority"), QDBusSignature(QLatin1String("u")), Tp::ConnMgrParamFlagHasDefault, 0)); //Tp::ConnMgrParamFlagRequired
+    setParameters(Tp::ProtocolParameterList()
+                  << Tp::ProtocolParameter(QLatin1String("account"), QDBusSignature(QLatin1String("s")), Tp::ConnMgrParamFlagRequired | Tp::ConnMgrParamFlagRegister)
+                  << Tp::ProtocolParameter(QLatin1String("password"), QDBusSignature(QLatin1String("s")), Tp::ConnMgrParamFlagSecret | Tp::ConnMgrParamFlagRegister)
+                  << Tp::ProtocolParameter(QLatin1String("server"), QDBusSignature(QLatin1String("s")), 0)
+                  << Tp::ProtocolParameter(QLatin1String("register"), QDBusSignature(QLatin1String("b")), Tp::ConnMgrParamFlagHasDefault, false)
+                  << Tp::ProtocolParameter(QLatin1String("resource"), QDBusSignature(QLatin1String("s")), 0)
+                  << Tp::ProtocolParameter(QLatin1String("priority"), QDBusSignature(QLatin1String("u")), Tp::ConnMgrParamFlagHasDefault, 0)
+                  << Tp::ProtocolParameter(QLatin1String("require-encryption"), QDBusSignature(QLatin1String("b")), Tp::ConnMgrParamFlagHasDefault, true)
+                  << Tp::ProtocolParameter(QLatin1String("ignore-ssl-errors"), QDBusSignature(QLatin1String("b")), Tp::ConnMgrParamFlagHasDefault, false)
+                  );
 
     m_addrIface = Tp::BaseProtocolAddressingInterface::create();
     m_addrIface->setAddressableVCardFields(QStringList() << QLatin1String("impp"));
