@@ -44,6 +44,8 @@ public:
     QString bestResourceForJid(const QString &jid) const;
     void setLastResource(const QString &jid, const QString &resource);
 
+    void updateJidPresence(const QString &jid, const QXmppPresence &presence);
+
 private:
     void doConnect(Tp::DBusError *error);
 

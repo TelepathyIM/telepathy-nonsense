@@ -361,6 +361,11 @@ void Connection::onPresenceReceived(const QXmppPresence &presence)
         return; // Ignore presence update from another resource of current account.
     }
 
+    updateJidPresence(jid, presence);
+}
+
+void Connection::updateJidPresence(const QString &jid, const QXmppPresence &presence)
+{
     QMap<QString, QXmppPresence> receivedPresence;
     receivedPresence.insert(jid, presence);
 
