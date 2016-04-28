@@ -31,6 +31,8 @@
 
 #include "uniquehandlemap.hh"
 
+class QXmppMucManager;
+
 class Connection : public Tp::BaseConnection
 {
     Q_OBJECT
@@ -48,6 +50,7 @@ public:
     QString getContactIdentifier(uint handle) const;
 
     void updateJidPresence(const QString &jid, const QXmppPresence &presence);
+    void updateMucParticipantInfo(const QString &participant, const QXmppPresence &presense);
 
 private:
     void doConnect(Tp::DBusError *error);
@@ -112,13 +115,16 @@ private:
 
     QPointer<QXmppClient> m_client;
     QXmppDiscoveryManager *m_discoveryManager;
+    QXmppMucManager *m_mucManager;
     QXmppPresence m_clientPresence;
     QXmppConfiguration m_clientConfig;
     UniqueHandleMap m_uniqueContactHandleMap;
+    UniqueHandleMap m_uniqueRoomHandleMap;
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
     QMap<QString, QStringList> m_contactsFeatures;
     QMap<QString, QString> m_clientTypes;
+    QMap<QString, QXmppPresence> m_mucParticipants;
     QList<QString> m_serverEntities;
 };
 

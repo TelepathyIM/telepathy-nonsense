@@ -33,6 +33,7 @@ set(nonsense_SOURCES
     filetransferchannel.cc
     protocol.cc
     textchannel.cc
+    muctextchannel.cc
     uniquehandlemap.cc
 )
 

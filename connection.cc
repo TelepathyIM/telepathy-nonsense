@@ -23,10 +23,12 @@
 #include <QXmppUtils.h>
 #include <QXmppPresence.h>
 #include <QXmppTransferManager.h>
+#include <QXmppMucManager.h>
 #include <QXmppConstants.h>
 
 #include "connection.hh"
 #include "textchannel.hh"
+#include "muctextchannel.hh"
 #include "filetransferchannel.hh"
 #include "common.hh"
 #include "telepathy-nonsense-config.h"
@@ -225,6 +227,9 @@ void Connection::doConnect(Tp::DBusError *error)
     connect(m_discoveryManager, SIGNAL(infoReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryInfoReceived(QXmppDiscoveryIq)));
     connect(m_discoveryManager, SIGNAL(itemsReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryItemsReceived(QXmppDiscoveryIq)));
 
+    m_mucManager = new QXmppMucManager();
+    m_client->addExtension(m_mucManager);
+
     QXmppTransferManager *transferManager = new QXmppTransferManager;
     m_client->addExtension(transferManager);
     connect(transferManager, SIGNAL(fileReceived(QXmppTransferJob *)), this, SLOT(onFileReceived(QXmppTransferJob *)));
@@ -378,6 +383,12 @@ void Connection::onPresenceReceived(const QXmppPresence &presence)
 
     if (jid == m_clientConfig.jidBare()) {
         return; // Ignore presence update from another resource of current account.
+    }
+
+    if (m_uniqueRoomHandleMap.contains(jid)) {
+        jid = presence.from();
+        updateMucParticipantInfo(jid, presence);
+        // TODO: If presence.mucItem().nick() is not empty, then the presence stanza is "Changing nickname". Look at XEP-0042, section 7.6 for details.
     }
 
     updateJidPresence(jid, presence);
@@ -541,6 +552,8 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
                     attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[contactJid]);
                 }
             }
+        } else if (m_mucParticipants.contains(contactJid)) {
+            contactPresences.insert(contactJid, m_mucParticipants.value(contactJid));
         }
 
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
@@ -618,7 +631,12 @@ QString Connection::getAlias(uint handle, Tp::DBusError *error)
     }
 
     const QString jid = m_uniqueContactHandleMap[handle];
-    return m_client->rosterManager().getRosterEntry(jid).name();
+
+    if (m_mucParticipants.contains(jid)) {
+        return QXmppUtils::jidToResource(jid);
+    } else {
+        return m_client->rosterManager().getRosterEntry(jid).name();
+    }
 }
 
 Tp::AliasMap Connection::getAliases(const Tp::UIntList &handles, Tp::DBusError *error)
@@ -653,6 +671,7 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
 
     switch (handleType) {
     case Tp::HandleTypeContact:
+    case Tp::HandleTypeRoom:
         break;
     default:
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
@@ -661,8 +680,9 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
 
     QStringList result;
 
+    UniqueHandleMap &map = handleType == Tp::HandleTypeContact ? m_uniqueContactHandleMap : m_uniqueRoomHandleMap;
     for (uint handle : handles) {
-        QString bareJid = m_uniqueContactHandleMap[handle];
+        QString bareJid = map[handle];
         if (bareJid.isEmpty()) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
             return QStringList();
@@ -683,6 +703,11 @@ Tp::UIntList Connection::requestHandles(uint handleType, const QStringList &iden
     case Tp::HandleTypeContact:
         for (const QString &identifier : identifiers) {
             result.append(m_uniqueContactHandleMap[identifier]);
+        }
+        break;
+    case Tp::HandleTypeRoom:
+        for (const QString &identifier : identifiers) {
+            result.append(m_uniqueRoomHandleMap[identifier]);
         }
         break;
     default:
@@ -800,6 +825,15 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
             targetHandle = m_uniqueContactHandleMap[targetID];
         }
         break;
+    case Tp::HandleTypeRoom:
+        if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle"))) {
+            targetHandle = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")).toUInt();
+            targetID = m_uniqueRoomHandleMap[targetHandle];
+        } else if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID"))) {
+            targetID = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetID")).toString();
+            targetHandle = m_uniqueRoomHandleMap[targetID];
+        }
+        break;
     default:
         if (error) {
             error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
@@ -829,6 +863,12 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
         if (targetHandleType == Tp::HandleTypeContact) {
             TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data());
             baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+        } else if (targetHandleType == Tp::HandleTypeRoom) {
+            MucTextChannelPtr textChannel;
+            textChannel = MucTextChannel::create(this, baseChannel.data());
+            baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+        } else {
+            Q_ASSERT(0);
         }
     } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER) {
         FileTransferChannelPtr fileTransferChannel = FileTransferChannel::create(this, baseChannel.data(), request);
@@ -844,6 +884,19 @@ void Connection::onMessageReceived(const QXmppMessage &message)
 
     initiatorHandle = targetHandle = m_uniqueContactHandleMap[QXmppUtils::jidToBareJid(message.from())];
     setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
+
+    // GroupChat messages processed in the MucTextChannel itself.
+    if (message.type() == QXmppMessage::GroupChat) {
+        return;
+    }
+
+    const QString bareJid = QXmppUtils::jidToBareJid(message.from());
+
+    // This check (if rooms map contains jid) prevents us from repeated invitation.
+    if (m_uniqueRoomHandleMap.contains(bareJid)) {
+        qDebug() << Q_FUNC_INFO << "message from room" << bareJid;
+        return;
+    }
 
     //TODO: initiator should be group creator
     Tp::DBusError error;
@@ -1120,4 +1173,9 @@ uint Connection::ensureContactHandle(const QString &id)
 QString Connection::getContactIdentifier(uint handle) const
 {
     return m_uniqueContactHandleMap[handle];
+}
+
+void Connection::updateMucParticipantInfo(const QString &participant, const QXmppPresence &presense)
+{
+    m_mucParticipants.insert(participant, presense);
 }
