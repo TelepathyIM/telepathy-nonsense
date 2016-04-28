@@ -61,7 +61,6 @@ TextChannelPtr TextChannel::create(Connection *connection, Tp::BaseChannel *base
 
 QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint flags, Tp::DBusError *error)
 {
-    uint outFlags = 0;
     QUuid messageToken = QUuid::createUuid();
     QXmppMessage message;
     message.setTo(m_contactJid + m_connection->lastResourceForJid(m_contactJid));
@@ -71,7 +70,6 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     if (flags & (Tp::MessageSendingFlagReportDelivery | Tp::MessageSendingFlagReportRead)) {
         message.setReceiptRequested(true);
         message.setMarkable(true);
-        outFlags |= Tp::MessageSendingFlagReportDelivery | Tp::MessageSendingFlagReportRead;
     }
 
     QString content;
