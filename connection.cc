@@ -639,7 +639,10 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
         return QStringList();
     }
 
-    if (handleType != Tp::HandleTypeContact) {
+    switch (handleType) {
+    case Tp::HandleTypeContact:
+        break;
+    default:
         error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
         return QStringList();
     }
@@ -664,14 +667,15 @@ Tp::UIntList Connection::requestHandles(uint handleType, const QStringList &iden
     DBG;
 
     Tp::UIntList result;
-
-    if (handleType != Tp::HandleTypeContact) {
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Connection::requestHandles - Handle Type unknown"));
-        return result;
-    }
-
-    for(auto &identifier : identifiers) {
-        result.append(m_uniqueContactHandleMap[identifier]);
+    switch (handleType) {
+    case Tp::HandleTypeContact:
+        for (const QString &identifier : identifiers) {
+            result.append(m_uniqueContactHandleMap[identifier]);
+        }
+        break;
+    default:
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Connection::requestHandles - Unsupported handle type"));
+        break;
     }
 
     return result;
@@ -766,9 +770,13 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
     const QString channelType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")).toString();
 
     bool requested = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".Requested")).toBool();
-    uint targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
+    uint targetHandleType = Tp::HandleTypeNone;
     uint targetHandle = 0;
     QString targetID;
+
+    if (request.contains(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType"))) {
+        targetHandleType = request.value(TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")).toUInt();
+    }
 
     switch (targetHandleType) {
     case Tp::HandleTypeContact:
@@ -787,6 +795,13 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
         return Tp::BaseChannelPtr();
     }
 
+    if (targetHandleType == Tp::HandleTypeNone) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Target handle type is not present in the request details."));
+        }
+        return Tp::BaseChannelPtr();
+    }
+
     if (targetID.isEmpty()) {
         if (error) {
             error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
@@ -794,14 +809,15 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
         return Tp::BaseChannelPtr();
     }
 
-
     Tp::BaseChannelPtr baseChannel = Tp::BaseChannel::create(this, channelType, Tp::HandleType(targetHandleType), targetHandle);
     baseChannel->setTargetID(targetID);
     baseChannel->setRequested(requested);
 
     if (channelType == TP_QT_IFACE_CHANNEL_TYPE_TEXT) {
-        TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data());
-        baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+        if (targetHandleType == Tp::HandleTypeContact) {
+            TextChannelPtr textChannel = TextChannel::create(this, baseChannel.data());
+            baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(textChannel));
+        }
     } else if (channelType == TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER) {
         FileTransferChannelPtr fileTransferChannel = FileTransferChannel::create(this, baseChannel.data(), request);
         baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(fileTransferChannel));
