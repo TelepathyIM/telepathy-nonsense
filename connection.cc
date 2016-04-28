@@ -450,6 +450,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
     for (auto handle : handles) {
         QString contactJid = m_uniqueContactHandleMap[handle];
         QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(contactJid);
+        QMap<QString, QXmppPresence> contactPresences;
         QVariantMap attributes;
 
         attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
@@ -467,9 +468,7 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
             }
 
-            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(QMap<QString, QXmppPresence>({{contactJid, m_client->clientPresence()}})));
-            }
+            contactPresences.insert(contactJid, m_client->clientPresence());
 
             if (m_client && m_client->isConnected()) {
                 if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
@@ -504,15 +503,17 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
                 }
             }
 
-            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(m_client->rosterManager().getAllPresencesForBareJid(contactJid)));
-            }
+            contactPresences = m_client->rosterManager().getAllPresencesForBareJid(contactJid);
 
             if (m_client && m_client->isConnected()) {
                 if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS)) {
                     attributes[TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS + QLatin1String("/token")] = QVariant::fromValue(m_avatarTokens[contactJid]);
                 }
             }
+        }
+
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(contactPresences));
         }
 
         contactAttributes[handle] = attributes;
