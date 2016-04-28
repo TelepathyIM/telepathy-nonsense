@@ -452,6 +452,8 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
         QXmppRosterIq::Item rosterIq = m_client->rosterManager().getRosterEntry(contactJid);
         QVariantMap attributes;
 
+        attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
+
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES)) {
             attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES + QLatin1String("/capabilities")] = QVariant::fromValue(getContactCapabilities(Tp::UIntList() << handle, error).value(handle));
         }
@@ -460,8 +462,6 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
         }
 
         if (contactJid == m_clientConfig.jidBare()) {
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
-
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/subscribe")] = Tp::SubscriptionStateYes;
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST + QLatin1String("/publish")] = Tp::SubscriptionStateYes;
@@ -477,9 +477,6 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
                 }
             }
         } else if (bareJids.contains(contactJid)) {
-            attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
-
-
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST)) {
                 switch (rosterIq.subscriptionType()) {
                 case QXmppRosterIq::Item::None:
