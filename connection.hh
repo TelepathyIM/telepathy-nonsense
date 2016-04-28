@@ -71,6 +71,10 @@ private:
     void clearAvatar(Tp::DBusError *error);
     QString setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error);
 
+    QStringList getClientType(uint handle) const;
+    Tp::ContactClientTypes getClientTypes(const Tp::UIntList &contacts, Tp::DBusError *error);
+    QStringList requestClientTypes(uint contact, Tp::DBusError *error);
+
     Tp::ContactCapabilitiesMap getContactCapabilities(const Tp::UIntList &contacts, Tp::DBusError *error);
 
     Tp::SimplePresence toTpPresence(QMap<QString, QXmppPresence> presences);
@@ -99,6 +103,7 @@ private:
     Tp::BaseConnectionSimplePresenceInterfacePtr m_simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr m_contactListIface;
     Tp::BaseConnectionAliasingInterfacePtr m_aliasingIface;
+    Tp::BaseConnectionClientTypesInterfacePtr m_clientTypesIface;
     Tp::BaseConnectionContactCapabilitiesInterfacePtr m_contactCapabilitiesIface;
     Tp::BaseConnectionAvatarsInterfacePtr m_avatarsIface;
     Tp::BaseConnectionRequestsInterfacePtr m_requestsIface;
@@ -112,6 +117,7 @@ private:
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
     QMap<QString, QStringList> m_contactsFeatures;
+    QMap<QString, QString> m_clientTypes;
     QList<QString> m_serverEntities;
 };
 

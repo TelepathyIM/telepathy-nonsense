@@ -78,6 +78,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
+                                                   << TP_QT_IFACE_CONNECTION_INTERFACE_CLIENT_TYPES
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_REQUESTS
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_AVATARS);
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactsIface));
@@ -106,6 +107,12 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_aliasingIface->setGetAliasesCallback(Tp::memFun(this, &Connection::getAliases));
     m_aliasingIface->setSetAliasesCallback(Tp::memFun(this, &Connection::setAliases));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_aliasingIface));
+
+    /* Connection.Interface.ClientTypes */
+    m_clientTypesIface = Tp::BaseConnectionClientTypesInterface::create();
+    m_clientTypesIface->setGetClientTypesCallback(Tp::memFun(this, &Connection::getClientTypes));
+    m_clientTypesIface->setRequestClientTypesCallback(Tp::memFun(this, &Connection::requestClientTypes));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_clientTypesIface));
 
     /* Connection.Interface.ContactCapabilities */
     m_contactCapabilitiesIface = Tp::BaseConnectionContactCapabilitiesInterface::create();
@@ -402,12 +409,15 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
     for (auto &identity : iq.identities()) {
         if (identity.category() == QLatin1String("client")) {
             m_contactsFeatures[iq.from()] = iq.features();
+            m_clientTypes[iq.from()] = identity.type();
 
             QString bareJid = QXmppUtils::jidToBareJid(iq.from());
+            uint handle = m_uniqueContactHandleMap[bareJid];
             if (bareJid + lastResourceForJid(bareJid, /* force */ true) == iq.from()) {
                 Tp::DBusError error;
-                Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << m_uniqueContactHandleMap[bareJid], &error);
+                Tp::ContactCapabilitiesMap caps = getContactCapabilities(Tp::UIntList() << handle, &error);
                 m_contactCapabilitiesIface->contactCapabilitiesChanged(caps);
+                m_clientTypesIface->clientTypesUpdated(handle, getClientType(handle));
             }
         } else if (identity.category() == QLatin1String("proxy")) {
             if (identity.type() == QLatin1String("bytestreams") && m_serverEntities.contains(iq.from())) {
@@ -465,6 +475,10 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
         }
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
             attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle, error));
+        }
+
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CLIENT_TYPES)) {
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CLIENT_TYPES + QLatin1String("/client-types")] = QVariant::fromValue(getClientType(handle));
         }
 
         if (contactJid == m_clientConfig.jidBare()) {
@@ -961,6 +975,41 @@ QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype,
     m_avatarTokens[m_clientConfig.jidBare()] = QString::fromLatin1(hash);
 
     return QString::fromLatin1(hash);
+}
+
+QStringList Connection::getClientType(uint handle) const
+{
+    if (handle == selfHandle()) {
+        return QStringList() << m_discoveryManager->clientType();
+    }
+
+    QString jid = m_uniqueContactHandleMap[handle];
+    if (jid.isEmpty()) {
+        return QStringList();
+    }
+
+    QString fullJid = jid + bestResourceForJid(jid);
+    if (!m_clientTypes.contains(fullJid)) {
+        return QStringList();
+    }
+
+    return QStringList() << m_clientTypes.value(fullJid);
+}
+
+Tp::ContactClientTypes Connection::getClientTypes(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    Tp::ContactClientTypes result;
+
+    for (uint handle : contacts) {
+        result.insert(handle, getClientType(handle));
+    }
+
+    return result;
+}
+
+QStringList Connection::requestClientTypes(uint contact, Tp::DBusError *error)
+{
+    return getClientType(contact);
 }
 
 Tp::ContactCapabilitiesMap Connection::getContactCapabilities(const Tp::UIntList &contacts, Tp::DBusError *error)
