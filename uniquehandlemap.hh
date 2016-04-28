@@ -26,7 +26,7 @@ class UniqueHandleMap
 public:
     UniqueHandleMap();
 
-    const QString operator[] (const uint handle);
+    const QString operator[] (const uint handle) const;
     uint operator[] (const QString &bareJid);
 
     bool contains(const QString &bareJid) const;

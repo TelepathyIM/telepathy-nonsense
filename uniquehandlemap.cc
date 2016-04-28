@@ -21,7 +21,7 @@ UniqueHandleMap::UniqueHandleMap()
 {
 }
 
-const QString UniqueHandleMap::operator[] (const uint handle)
+const QString UniqueHandleMap::operator[] (const uint handle) const
 {
     if (handle > static_cast<uint>(m_knownHandles.size())) {
         return QString();
