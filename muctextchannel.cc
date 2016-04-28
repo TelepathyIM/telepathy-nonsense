@@ -41,11 +41,12 @@ MucTextChannel::MucTextChannel(Connection *connection, Tp::BaseChannel *baseChan
     // Default flags:
     Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagChannelSpecificHandles|Tp::ChannelGroupFlagHandleOwnersNotAvailable;
     // Permissions (not implemented yet):
-//    groupFlags |= Tp::ChannelGroupFlagCanAdd|Tp::ChannelGroupFlagCanRemove
+    groupFlags |= Tp::ChannelGroupFlagCanAdd|Tp::ChannelGroupFlagCanRemove;
 
     m_groupIface = Tp::BaseChannelGroupInterface::create();
     m_groupIface->setGroupFlags(groupFlags);
     m_groupIface->setSelfHandle(connection->ensureContactHandle(selfJid()));
+    m_groupIface->setAddMembersCallback(Tp::memFun(this, &MucTextChannel::addMembers));
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_groupIface));
 
     const QString roomName = QXmppUtils::jidToUser(m_room->jid());
@@ -65,6 +66,34 @@ MucTextChannel::MucTextChannel(Connection *connection, Tp::BaseChannel *baseChan
 
     connect(m_room, SIGNAL(nameChanged(QString)), this, SLOT(onRoomNameChanged(QString)));
     connect(m_room, SIGNAL(messageReceived(QXmppMessage)), this, SLOT(onMessageReceived(QXmppMessage)));
+}
+
+void MucTextChannel::addMembers(const Tp::UIntList &contacts, const QString &reason, Tp::DBusError *error)
+{
+    QStringList jids;
+    for (uint handle : contacts) {
+        const QString jid = m_connection->getContactIdentifier(handle);
+        if (jid.isEmpty()) {
+            if (error) {
+                error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            }
+            return;
+        }
+
+        jids.append(jid);
+    }
+
+    // Direct Invitation, XEP-0249
+    for (const QString &jid : jids) {
+        QUuid messageToken = QUuid::createUuid();
+        QXmppMessage message;
+        message.setType(QXmppMessage::Normal);
+        message.setTo(jid); // contacts
+        message.setId(messageToken.toString());
+        message.setMucInvitationJid(m_room->jid());
+        message.setMucInvitationReason(reason);
+        m_connection->qxmppClient()->sendPacket(message);
+    }
 }
 
 MucTextChannel::~MucTextChannel()

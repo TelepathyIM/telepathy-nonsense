@@ -46,6 +46,8 @@ protected:
     void setChatState(uint state, Tp::DBusError *error);
     void messageAcknowledged(const QString &messageId);
 
+    void addMembers(const Tp::UIntList &contacts, const QString &reason, Tp::DBusError *error);
+
     bool sendQXmppMessage(QXmppMessage &message) override;
     QString targetJid() const override;
     QString selfJid() const override;
