@@ -455,6 +455,9 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES)) {
             attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES + QLatin1String("/capabilities")] = QVariant::fromValue(getContactCapabilities(Tp::UIntList() << handle, error).value(handle));
         }
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(getAlias(handle, error));
+        }
 
         if (contactJid == m_clientConfig.jidBare()) {
             attributes[TP_QT_IFACE_CONNECTION + QLatin1String("/contact-id")] = contactJid;
@@ -466,10 +469,6 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(QMap<QString, QXmppPresence>({{contactJid, m_client->clientPresence()}})));
-            }
-
-            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(contactJid);
             }
 
             if (m_client && m_client->isConnected()) {
@@ -510,10 +509,6 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
 
             if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
                 attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(m_client->rosterManager().getAllPresencesForBareJid(contactJid)));
-            }
-
-            if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING)) {
-                attributes[TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING + QLatin1String("/alias")] = QVariant::fromValue(rosterIq.name());
             }
 
             if (m_client && m_client->isConnected()) {
@@ -585,15 +580,26 @@ Tp::SimplePresence Connection::toTpPresence(QMap<QString, QXmppPresence> presenc
     return tpPresence;
 }
 
+QString Connection::getAlias(uint handle, Tp::DBusError *error)
+{
+    Q_UNUSED(error);
+
+    if (handle == selfHandle()) {
+        return m_clientConfig.jidBare();
+    }
+
+    const QString jid = m_uniqueContactHandleMap[handle];
+    return m_client->rosterManager().getRosterEntry(jid).name();
+}
+
 Tp::AliasMap Connection::getAliases(const Tp::UIntList &handles, Tp::DBusError *error)
 {
     DBG;
-    Q_UNUSED(error);
 
     Tp::AliasMap aliases;
 
     for (uint handle : handles) {
-        aliases[handle] = m_client->rosterManager().getRosterEntry(m_uniqueContactHandleMap[handle]).name();
+        aliases[handle] = getAlias(handle, error);
     }
 
     return aliases;

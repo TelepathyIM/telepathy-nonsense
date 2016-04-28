@@ -50,6 +50,7 @@ private:
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
     Tp::ContactAttributesMap getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error);
     Tp::ContactAttributesMap getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error);
+    QString getAlias(uint handle, Tp::DBusError *error);
     Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error);
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
     QStringList inspectHandles(uint handleType, const Tp::UIntList &handles, Tp::DBusError *error);
