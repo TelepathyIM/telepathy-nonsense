@@ -882,8 +882,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
 {
     uint initiatorHandle, targetHandle;
 
-    initiatorHandle = targetHandle = m_uniqueContactHandleMap[QXmppUtils::jidToBareJid(message.from())];
-    setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
+    Tp::HandleType handleType;
 
     // GroupChat messages processed in the MucTextChannel itself.
     if (message.type() == QXmppMessage::GroupChat) {
@@ -898,6 +897,18 @@ void Connection::onMessageReceived(const QXmppMessage &message)
         return;
     }
 
+    if (!message.mucInvitationJid().isEmpty()) {
+        initiatorHandle = targetHandle = m_uniqueRoomHandleMap[bareJid];
+        handleType = Tp::HandleTypeRoom;
+    } else {
+        initiatorHandle = targetHandle = m_uniqueContactHandleMap[bareJid];
+        handleType = Tp::HandleTypeContact;
+    }
+
+    if (handleType == Tp::HandleTypeContact) {
+        setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
+    }
+
     //TODO: initiator should be group creator
     Tp::DBusError error;
     bool yours;
@@ -905,7 +916,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     QVariantMap request;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".ChannelType")] = TP_QT_IFACE_CHANNEL_TYPE_TEXT;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandle")] = targetHandle;
-    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = Tp::HandleTypeContact;
+    request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = handleType;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
 
     Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
