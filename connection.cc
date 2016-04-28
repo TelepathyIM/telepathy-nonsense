@@ -1034,3 +1034,8 @@ void Connection::setLastResource(const QString &jid, const QString &resource)
 {
     m_lastResources[jid] = resource;
 }
+
+uint Connection::ensureContactHandle(const QString &id)
+{
+    return m_uniqueContactHandleMap[id];
+}

@@ -44,6 +44,8 @@ public:
     QString bestResourceForJid(const QString &jid) const;
     void setLastResource(const QString &jid, const QString &resource);
 
+    uint ensureContactHandle(const QString &id);
+
     void updateJidPresence(const QString &jid, const QXmppPresence &presence);
 
 private:
