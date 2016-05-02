@@ -1104,3 +1104,8 @@ uint Connection::ensureContactHandle(const QString &id)
 {
     return m_uniqueContactHandleMap[id];
 }
+
+QString Connection::getContactIdentifier(uint handle) const
+{
+    return m_uniqueContactHandleMap[handle];
+}

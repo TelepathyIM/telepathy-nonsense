@@ -45,6 +45,7 @@ public:
     void setLastResource(const QString &jid, const QString &resource);
 
     uint ensureContactHandle(const QString &id);
+    QString getContactIdentifier(uint handle) const;
 
     void updateJidPresence(const QString &jid, const QXmppPresence &presence);
 
