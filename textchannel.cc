@@ -126,7 +126,6 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
     if (message.marker() != QXmppMessage::NoMarker) {
         Tp::MessagePartList partList;
         header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
-        partList << header;
 
         switch (message.marker()) {
         case QXmppMessage::Acknowledged:
@@ -139,6 +138,7 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
         default:
             Q_ASSERT(0);
         }
+        partList << header;
         addReceivedMessage(partList);
     }
 
