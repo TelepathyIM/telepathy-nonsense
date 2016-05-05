@@ -21,6 +21,58 @@
 #include "common.hh"
 #include "connection.hh"
 
+QString xmppConditionToStr(QXmppStanza::Error::Condition condition)
+{
+    switch (condition) {
+    case QXmppStanza::Error::BadRequest:
+        return QLatin1String("Bad request");
+    case QXmppStanza::Error::Conflict:
+        return QLatin1String("Conflict");
+    case QXmppStanza::Error::FeatureNotImplemented:
+        return QLatin1String("Feature is not implemented");
+    case QXmppStanza::Error::Forbidden:
+        return QLatin1String("Forbidden");
+    case QXmppStanza::Error::Gone:
+        return QLatin1String("Gone");
+    case QXmppStanza::Error::InternalServerError:
+        return QLatin1String("Internal server error");
+    case QXmppStanza::Error::ItemNotFound:
+        return QLatin1String("Item not found");
+    case QXmppStanza::Error::JidMalformed:
+        return QLatin1String("Jid is malformed");
+    case QXmppStanza::Error::NotAcceptable:
+        return QLatin1String("Not acceptable");
+    case QXmppStanza::Error::NotAllowed:
+        return QLatin1String("Not allowed");
+    case QXmppStanza::Error::NotAuthorized:
+        return QLatin1String("Not authorized");
+    case QXmppStanza::Error::PaymentRequired:
+        return QLatin1String("Payment required");
+    case QXmppStanza::Error::RecipientUnavailable:
+        return QLatin1String("Recipient unavailable");
+    case QXmppStanza::Error::Redirect:
+        return QLatin1String("Redirect");
+    case QXmppStanza::Error::RegistrationRequired:
+        return QLatin1String("Registration required");
+    case QXmppStanza::Error::RemoteServerNotFound:
+        return QLatin1String("Remote server not found");
+    case QXmppStanza::Error::RemoteServerTimeout:
+        return QLatin1String("Remote server timeout");
+    case QXmppStanza::Error::ResourceConstraint:
+        return QLatin1String("Resource constraint");
+    case QXmppStanza::Error::ServiceUnavailable:
+        return QLatin1String("Service unavailable");
+    case QXmppStanza::Error::SubscriptionRequired:
+        return QLatin1String("Subscription required");
+    case QXmppStanza::Error::UndefinedCondition:
+        return QLatin1String("Undefined condition");
+    case QXmppStanza::Error::UnexpectedRequest:
+        return QLatin1String("Unexpected request");
+    default:
+        return QLatin1String("Unknown error");
+    }
+}
+
 TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel)
     : Tp::BaseChannelTextType(baseChannel),
       m_connection(connection),
@@ -122,6 +174,37 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
             Q_ASSERT(0);
         }
         m_chatStateIface->chatStateChanged(senderHandle, state);
+    }
+
+    if (message.type() == QXmppMessage::Error) {
+        Tp::MessagePartList partList;
+        header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
+
+        switch (message.error().type()) {
+        // It seems that there is no "continue" error type in the spec
+        case QXmppStanza::Error::Cancel:
+        case QXmppStanza::Error::Modify:
+        case QXmppStanza::Error::Auth:
+            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusPermanentlyFailed);
+            break;
+        case QXmppStanza::Error::Wait:
+            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusTemporarilyFailed);
+            break;
+        default:
+            break;
+        }
+
+        QString errorMessage = xmppConditionToStr(message.error().condition());
+
+        if (message.error().code() != 0) {
+            errorMessage.append(QString(QLatin1String(" (code %1)")).arg(message.error().code()));
+        }
+
+        header[QLatin1String("delivery-error-message")] = QDBusVariant(errorMessage);
+
+        partList << header;
+        addReceivedMessage(partList);
+        return;
     }
 
     /* Handle chat markers */
