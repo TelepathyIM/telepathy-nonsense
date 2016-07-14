@@ -75,6 +75,14 @@ private:
     void clearAvatar(Tp::DBusError *error);
     QString setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error);
 
+    void updateGroups();
+    void setContactGroups(uint contact, const QStringList &groups, Tp::DBusError *error);
+    void setGroupMembers(const QString &group, const Tp::UIntList &members, Tp::DBusError *error);
+    void addToGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error);
+    void removeFromGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error);
+    void removeGroup(const QString &group, Tp::DBusError *error);
+    void renameGroup(const QString &oldName, const QString &newName, Tp::DBusError *error);
+
     QStringList getClientType(uint handle) const;
     Tp::ContactClientTypes getClientTypes(const Tp::UIntList &contacts, Tp::DBusError *error);
     QStringList requestClientTypes(uint contact, Tp::DBusError *error);
@@ -106,6 +114,7 @@ private:
     Tp::BaseConnectionContactsInterfacePtr m_contactsIface;
     Tp::BaseConnectionSimplePresenceInterfacePtr m_simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr m_contactListIface;
+    Tp::BaseConnectionContactGroupsInterfacePtr m_contactGroupsIface;
     Tp::BaseConnectionAliasingInterfacePtr m_aliasingIface;
     Tp::BaseConnectionClientTypesInterfacePtr m_clientTypesIface;
     Tp::BaseConnectionContactCapabilitiesInterfacePtr m_contactCapabilitiesIface;

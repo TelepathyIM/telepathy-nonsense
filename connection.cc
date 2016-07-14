@@ -89,6 +89,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
                                                    << TP_QT_IFACE_CONNECTION
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
+                                                   << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CLIENT_TYPES
@@ -114,6 +115,17 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_contactListIface->setUnsubscribeCallback(Tp::memFun(this, &Connection::unsubscribe));
     m_contactListIface->setUnpublishCallback(Tp::memFun(this, &Connection::unpublish));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactListIface));
+
+    /* Connection.Interface.ContactGroups */
+    m_contactGroupsIface = Tp::BaseConnectionContactGroupsInterface::create();
+    m_contactGroupsIface->setDisjointGroups(false);
+    m_contactGroupsIface->setSetContactGroupsCallback(Tp::memFun(this, &Connection::setContactGroups));
+    m_contactGroupsIface->setSetGroupMembersCallback(Tp::memFun(this, &Connection::setGroupMembers));
+    m_contactGroupsIface->setAddToGroupCallback(Tp::memFun(this, &Connection::addToGroup));
+    m_contactGroupsIface->setRemoveFromGroupCallback(Tp::memFun(this, &Connection::removeFromGroup));
+    m_contactGroupsIface->setRemoveGroupCallback(Tp::memFun(this, &Connection::removeGroup));
+    m_contactGroupsIface->setRenameGroupCallback(Tp::memFun(this, &Connection::renameGroup));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactGroupsIface));
 
     /* Connection.Interface.Aliasing */
     m_aliasingIface = Tp::BaseConnectionAliasingInterface::create();
@@ -341,6 +353,7 @@ void Connection::onRosterReceived()
 {
     DBG;
 
+    updateGroups();
     m_contactListIface->setContactListState(Tp::ContactListStateSuccess);
 }
 
@@ -554,6 +567,11 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
             }
         } else if (m_mucParticipants.contains(contactJid)) {
             contactPresences.insert(contactJid, m_mucParticipants.value(contactJid));
+        }
+
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS)) {
+            QStringList groups = rosterIq.groups().toList();
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS + QLatin1String("/groups")] = QVariant::fromValue(groups);
         }
 
         if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE)) {
@@ -1067,6 +1085,339 @@ QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype,
     m_avatarTokens[m_clientConfig.jidBare()] = QString::fromLatin1(hash);
 
     return QString::fromLatin1(hash);
+}
+
+void Connection::updateGroups()
+{
+    QSet<QString> groups;
+
+    for (const QString &jid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(jid);
+        groups.unite(item.groups());
+    }
+
+    m_contactGroupsIface->setGroups(groups.toList());
+    m_contactGroupsIface->groupsCreated(m_contactGroupsIface->groups());
+}
+
+void Connection::setContactGroups(uint contact, const QStringList &groups, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    if (!m_uniqueContactHandleMap.contains(contact)) {
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+    }
+
+    const QString contactJid = m_uniqueContactHandleMap[contact];
+
+    QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+
+    auto oldGroups = item.groups();
+
+    item.setGroups(groups.toSet());
+
+    if (oldGroups == item.groups()) {
+        // NOP
+        return;
+    }
+
+    QXmppRosterIq iq;
+    iq.setType(QXmppIq::Set);
+    iq.addItem(item);
+
+    m_client->sendPacket(iq);
+
+    auto groupsAddedToTheContact = item.groups().subtract(oldGroups);
+    auto groupsRemovedFromTheContact = oldGroups.subtract(item.groups());
+
+    auto newGroups = groupsAddedToTheContact;
+    auto removedGroups = groupsRemovedFromTheContact;
+
+    for (const QString &jid : m_client->rosterManager().getRosterBareJids()) {
+        if (jid == contactJid) {
+            // Skip the target contact
+            continue;
+        }
+
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(jid);
+
+        newGroups.subtract(item.groups());
+        removedGroups.subtract(item.groups());
+    }
+
+    if (!newGroups.isEmpty()) {
+        m_contactGroupsIface->groupsCreated(newGroups.toList());
+    }
+    if (!removedGroups.isEmpty()) {
+        m_contactGroupsIface->groupsRemoved(removedGroups.toList());
+    }
+    m_contactGroupsIface->groupsChanged(Tp::UIntList() << contact, groupsAddedToTheContact.toList(), groupsRemovedFromTheContact.toList());
+}
+
+void Connection::setGroupMembers(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    QStringList memberJids;
+
+    for (uint handle : members) {
+        if (!m_uniqueContactHandleMap.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            return;
+        }
+
+        memberJids.append(m_uniqueContactHandleMap[handle]);
+    }
+
+    Tp::UIntList handlesRemovedFromTheGroup;
+    Tp::UIntList handlesAddedToTheGroup;
+
+    bool groupExisted = false;
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+        if (item.groups().contains(group)) {
+            groupExisted = true;
+
+            if (memberJids.contains(contactJid)) {
+                // NOP
+                continue;
+            } else {
+                auto groups = item.groups();
+                groups.remove(group);
+                item.setGroups(groups);
+
+                handlesRemovedFromTheGroup.append(m_uniqueContactHandleMap[contactJid]);
+            }
+        } else {
+            if (memberJids.contains(contactJid)) {
+                auto groups = item.groups();
+                groups.insert(group);
+                item.setGroups(groups);
+
+                handlesAddedToTheGroup.append(m_uniqueContactHandleMap[contactJid]);
+            } else {
+                // NOP
+                continue;
+            }
+        }
+
+        QXmppRosterIq iq;
+        iq.setType(QXmppIq::Set);
+        iq.addItem(item);
+        m_client->sendPacket(iq);
+    }
+
+    if (!groupExisted && !members.isEmpty()) {
+        m_contactGroupsIface->groupsCreated(QStringList() << group);
+    }
+
+    if (groupExisted && members.isEmpty()) {
+        m_contactGroupsIface->groupsRemoved(QStringList() << group);
+    }
+
+    m_contactGroupsIface->groupsChanged(handlesRemovedFromTheGroup, QStringList(), QStringList() << group);
+    m_contactGroupsIface->groupsChanged(handlesAddedToTheGroup, QStringList() << group, QStringList());
+}
+
+void Connection::addToGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    if (members.isEmpty()) {
+        // NOP
+        return;
+    }
+
+    QStringList memberJids;
+
+    for (uint handle : members) {
+        if (!m_uniqueContactHandleMap.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            return;
+        }
+
+        memberJids.append(m_uniqueContactHandleMap[handle]);
+    }
+
+    Tp::UIntList handlesAddedToTheGroup;
+
+    bool groupExists = false;
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+        if (item.groups().contains(group)) {
+            groupExists = true;
+            continue;
+        }
+
+        if (!memberJids.contains(contactJid)) {
+            continue;
+        }
+
+        auto groups = item.groups();
+        groups.insert(group);
+        item.setGroups(groups);
+
+        QXmppRosterIq iq;
+        iq.setType(QXmppIq::Set);
+        iq.addItem(item);
+        m_client->sendPacket(iq);
+
+        handlesAddedToTheGroup.append(m_uniqueContactHandleMap[contactJid]);
+    }
+
+    if (!groupExists) {
+        m_contactGroupsIface->groupsCreated(QStringList() << group);
+    }
+
+    m_contactGroupsIface->groupsChanged(handlesAddedToTheGroup, QStringList() << group, QStringList());
+}
+
+void Connection::removeFromGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    QStringList memberJids;
+
+    for (uint handle : members) {
+        if (!m_uniqueContactHandleMap.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            return;
+        }
+
+        memberJids.append(m_uniqueContactHandleMap[handle]);
+    }
+
+    Tp::UIntList handlesRemovedFromTheGroup;
+
+    bool groupExisted = false;
+    bool groupRemoved = true;
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+
+        if (item.groups().contains(group)) {
+            groupExisted = true;
+            if (memberJids.contains(contactJid)) {
+                auto groups = item.groups();
+                groups.remove(group);
+                item.setGroups(groups);
+
+                QXmppRosterIq iq;
+                iq.setType(QXmppIq::Set);
+                iq.addItem(item);
+                m_client->sendPacket(iq);
+
+                handlesRemovedFromTheGroup.append(m_uniqueContactHandleMap[contactJid]);
+            } else {
+                groupRemoved = false;
+            }
+        }
+    }
+
+    if (!groupExisted) {
+        // NOP
+        return;
+    }
+
+    if (groupRemoved) {
+        m_contactGroupsIface->groupsRemoved(QStringList() << group);
+    }
+
+    m_contactGroupsIface->groupsChanged(handlesRemovedFromTheGroup, QStringList(), QStringList() << group);
+}
+
+void Connection::removeGroup(const QString &group, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    bool groupExisted = false;
+    Tp::UIntList handlesRemovedFromTheGroup;
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+
+        if (item.groups().contains(group)) {
+            groupExisted = true;
+
+            auto groups = item.groups();
+            groups.remove(group);
+            item.setGroups(groups);
+
+            QXmppRosterIq iq;
+            iq.setType(QXmppIq::Set);
+            iq.addItem(item);
+            m_client->sendPacket(iq);
+
+            handlesRemovedFromTheGroup.append(m_uniqueContactHandleMap[contactJid]);
+        }
+    }
+
+    if (groupExisted) {
+        m_contactGroupsIface->groupsRemoved(QStringList() << group);
+        m_contactGroupsIface->groupsChanged(handlesRemovedFromTheGroup, QStringList(), QStringList() << group);
+    }
+}
+
+void Connection::renameGroup(const QString &oldName, const QString &newName, Tp::DBusError *error)
+{
+    if ((!m_client) || (!m_client->isConnected())) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+        if (item.groups().contains(newName)) {
+            error->set(TP_QT_ERROR_NOT_AVAILABLE, QLatin1String("There is already a group with the new name"));
+            return;
+        }
+    }
+
+    Tp::UIntList affectedHandles;
+
+    for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
+        QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
+
+        if (item.groups().contains(oldName)) {
+            auto groups = item.groups();
+            groups.remove(oldName);
+            groups.insert(newName);
+            item.setGroups(groups);
+
+            QXmppRosterIq iq;
+            iq.setType(QXmppIq::Set);
+            iq.addItem(item);
+            m_client->sendPacket(iq);
+
+            affectedHandles.append(m_uniqueContactHandleMap[contactJid]);
+        }
+    }
+
+    if (affectedHandles.isEmpty()) {
+        error->set(TP_QT_ERROR_DOES_NOT_EXIST, QLatin1String("The group does not exist"));
+        return;
+    }
+
+    m_contactGroupsIface->groupsRemoved(QStringList() << oldName);
+    m_contactGroupsIface->groupsChanged(affectedHandles, QStringList() << newName, QStringList() << oldName);
 }
 
 QStringList Connection::getClientType(uint handle) const
