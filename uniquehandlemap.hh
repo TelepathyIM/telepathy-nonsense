@@ -29,6 +29,7 @@ public:
     const QString operator[] (const uint handle) const;
     uint operator[] (const QString &bareJid);
 
+    bool contains(const uint handle) const;
     bool contains(const QString &bareJid) const;
 
 private:
