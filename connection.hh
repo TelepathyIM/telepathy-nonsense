@@ -111,6 +111,7 @@ private slots:
     void onLogMessage(QXmppLogger::MessageType type, const QString &text);
 
 private:
+    void updateVCard(const QString &jid, const QXmppVCardIq &vcard);
     void updateAvatar(const QByteArray &photo, const QString &jid, const QString &type);
 
     Tp::BaseConnectionContactsInterfacePtr m_contactsIface;
@@ -134,6 +135,7 @@ private:
     QMap<QString, QString> m_avatarTokens;
     QMap<QString, QString> m_lastResources;
     QMap<QString, QStringList> m_contactsFeatures;
+    QMap<QString, QXmppVCardIq> m_vcardMap;
     QMap<QString, QString> m_clientTypes;
     QMap<QString, QXmppPresence> m_mucParticipants;
     QList<QString> m_serverEntities;

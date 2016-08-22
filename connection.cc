@@ -1022,13 +1022,19 @@ void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *erro
 void Connection::onVCardReceived(QXmppVCardIq iq)
 {
     DBG;
-    updateAvatar(iq.photo(), QXmppUtils::jidToBareJid(iq.from()), iq.photoType());
+    updateVCard(QXmppUtils::jidToBareJid(iq.from()), iq);
 }
 
 void Connection::onClientVCardReceived()
 {
     DBG;
-    updateAvatar(m_client->vCardManager().clientVCard().photo(), m_clientConfig.jidBare(), m_client->vCardManager().clientVCard().photoType());
+    updateVCard(m_clientConfig.jidBare(), m_client->vCardManager().clientVCard());
+}
+
+void Connection::updateVCard(const QString &jid, const QXmppVCardIq &vcard)
+{
+    m_vcardMap.insert(jid, vcard);
+    updateAvatar(vcard.photo(), jid, vcard.photoType());
 }
 
 void Connection::updateAvatar(const QByteArray &photo, const QString &jid, const QString &type)
