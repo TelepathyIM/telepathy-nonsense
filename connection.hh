@@ -58,6 +58,12 @@ private:
     uint setPresence(const QString &status, const QString &message, Tp::DBusError *error);
     Tp::ContactAttributesMap getContactListAttributes(const QStringList &interfaces, bool hold, Tp::DBusError *error);
     Tp::ContactAttributesMap getContactAttributes(const Tp::UIntList &handles, const QStringList &interfaces, Tp::DBusError *error);
+
+    void refreshContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
+    Tp::ContactInfoFieldList requestContactInfo(uint handle, Tp::DBusError *error = nullptr);
+    Tp::ContactInfoMap getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error);
+    Tp::ContactInfoFieldList getUserInfo(const uint handle) const;
+
     QString getAlias(uint handle, Tp::DBusError *error);
     Tp::AliasMap getAliases(const Tp::UIntList &handles, Tp::DBusError *error);
     void setAliases(const Tp::AliasMap &aliases, Tp::DBusError *error);
@@ -118,6 +124,7 @@ private:
     Tp::BaseConnectionSimplePresenceInterfacePtr m_simplePresenceIface;
     Tp::BaseConnectionContactListInterfacePtr m_contactListIface;
     Tp::BaseConnectionContactGroupsInterfacePtr m_contactGroupsIface;
+    Tp::BaseConnectionContactInfoInterfacePtr m_contactInfoIface;
     Tp::BaseConnectionAliasingInterfacePtr m_aliasingIface;
     Tp::BaseConnectionClientTypesInterfacePtr m_clientTypesIface;
     Tp::BaseConnectionContactCapabilitiesInterfacePtr m_contactCapabilitiesIface;

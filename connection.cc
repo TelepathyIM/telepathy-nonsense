@@ -88,6 +88,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_LIST
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS
+                                                   << TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_ALIASING
                                                    << TP_QT_IFACE_CONNECTION_INTERFACE_CLIENT_TYPES
@@ -124,6 +125,71 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_contactGroupsIface->setRemoveGroupCallback(Tp::memFun(this, &Connection::removeGroup));
     m_contactGroupsIface->setRenameGroupCallback(Tp::memFun(this, &Connection::renameGroup));
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactGroupsIface));
+
+    /* Connection.Interface.ContactInfo */
+    m_contactInfoIface = Tp::BaseConnectionContactInfoInterface::create();
+
+    //Arguments: [Variant: [Argument: a(sasuu)
+    //{
+    //[Argument: (sasuu) "fn", {}, 1, 1],
+    //[Argument: (sasuu) "bday", {}, 1, 4294967295],
+    //[Argument: (sasuu) "mailer", {}, 1, 4294967295],
+    //[Argument: (sasuu) "tz", {}, 1, 4294967295],
+    //[Argument: (sasuu) "title", {}, 1, 4294967295],
+    //[Argument: (sasuu) "role", {}, 1, 4294967295],
+    //[Argument: (sasuu) "note", {}, 1, 4294967295],
+    //[Argument: (sasuu) "prodid", {}, 1, 4294967295],
+    //[Argument: (sasuu) "rev", {}, 1, 4294967295],
+    //[Argument: (sasuu) "sort-string", {}, 1, 4294967295],
+    //[Argument: (sasuu) "uid", {}, 1, 4294967295],
+    //[Argument: (sasuu) "url", {}, 1, 4294967295],
+    //[Argument: (sasuu) "nickname", {}, 3, 4294967295],
+    //[Argument: (sasuu) "x-jabber", {}, 1, 4294967295],
+    //[Argument: (sasuu) "x-desc", {}, 1, 4294967295],
+    //[Argument: (sasuu) "n", {}, 1, 1],
+    //[Argument: (sasuu) "adr", {"type=home", "type=work", "type=postal", "type=parcel", "type=dom", "type=intl", "type=pref"}, 0, 4294967295],
+    //[Argument: (sasuu) "geo", {}, 1, 1],
+    //[Argument: (sasuu) "tel", {"type=home", "type=work", "type=voice", "type=fax", "type=pager", "type=msg", "type=cell", "type=video", "type=bbs", "type=modem", "type=isdn", "type=pcs", "type=pref"}, 0, 4294967295],
+    //[Argument: (sasuu) "email", {"type=home", "type=work", "type=internet", "type=pref", "type=x400"}, 0, 4294967295],
+    //[Argument: (sasuu) "label", {"type=home", "type=work", "type=postal", "type=parcel", "type=dom", "type=intl", "type=pref"}, 0, 4294967295],
+    //[Argument: (sasuu) "org", {}, 1, 4294967295]}
+    //]]
+
+//    Tp::FieldSpec vcardSpecPhone;
+//    Tp::FieldSpec vcardSpecNickname;
+//    Tp::FieldSpec vcardSpecBDay;
+//    vcardSpecPhone.name = QLatin1String("tel");
+//    vcardSpecPhone.parameters = QStringList()
+//            << QLatin1String("type=home")
+//            << QLatin1String("type=work")
+//            << QLatin1String("type=voice")
+//            << QLatin1String("type=fax")
+//            << QLatin1String("type=pager")
+//            << QLatin1String("type=msg")
+//            << QLatin1String("type=cell")
+//            << QLatin1String("type=video")
+//            << QLatin1String("type=bbs")
+//            << QLatin1String("type=modem")
+//            << QLatin1String("type=isdn")
+//            << QLatin1String("type=pcs")
+//            << QLatin1String("type=pref")
+//               ;
+
+//    vcardSpecPhone.max =  UINT32_MAX;
+//    vcardSpecBDay.name = QLatin1String("bday");
+//    vcardSpecBDay.max = 1;
+
+    Tp::FieldSpec vcardSpecUrl;
+    vcardSpecUrl.max =  UINT32_MAX;
+    vcardSpecUrl.name = QLatin1String("url");
+
+    m_contactInfoIface->setSupportedFields(Tp::FieldSpecs()
+                                           << vcardSpecUrl
+                                         );
+    m_contactInfoIface->setContactInfoFlags(Tp::ContactInfoFlagPush);
+    m_contactInfoIface->setGetContactInfoCallback(Tp::memFun(this, &Connection::getContactInfo));
+    m_contactInfoIface->setRequestContactInfoCallback(Tp::memFun(this, &Connection::requestContactInfo));
+    plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_contactInfoIface));
 
     /* Connection.Interface.Aliasing */
     m_aliasingIface = Tp::BaseConnectionAliasingInterface::create();
@@ -591,9 +657,151 @@ Tp::ContactAttributesMap Connection::getContactAttributes(const Tp::UIntList &ha
             attributes[TP_QT_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE + QLatin1String("/presence")] = QVariant::fromValue(toTpPresence(contactPresences));
         }
 
+        if (interfaces.contains(TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO)) {
+            attributes[TP_QT_IFACE_CONNECTION_INTERFACE_CONTACT_INFO + QLatin1String("/info")] = QVariant::fromValue(requestContactInfo(handle));
+        }
+
         contactAttributes[handle] = attributes;
     }
     return contactAttributes;
+}
+
+void Connection::refreshContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    if (!m_client || !m_client->isConnected()) {
+        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        return;
+    }
+
+    for (uint handle : contacts) {
+        if (!m_uniqueContactHandleMap.contains(handle)) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
+            return;
+        }
+        m_client->vCardManager().requestVCard(m_uniqueContactHandleMap[handle]);
+    }
+}
+
+Tp::ContactInfoFieldList Connection::requestContactInfo(uint handle, Tp::DBusError *error)
+{
+    if (!m_uniqueContactHandleMap.contains(handle)) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Invalid handle"));
+        }
+        return Tp::ContactInfoFieldList();
+    }
+
+    const QString jid = m_uniqueContactHandleMap[handle];
+
+    if (jid.isEmpty()) {
+        if (error) {
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown identifier"));
+        }
+        return Tp::ContactInfoFieldList();
+    }
+
+    if (!m_vcardMap.contains(jid)) {
+        qDebug() << Q_FUNC_INFO << "vcard of contact" << jid << "is not retrieved yet.";
+        return Tp::ContactInfoFieldList();
+    }
+
+    const QXmppVCardIq contactVCard = m_vcardMap.value(jid);
+
+    Tp::ContactInfoFieldList contactInfo;
+    if (contactVCard.birthday().isValid()) {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("bday");
+        contactInfoField.fieldValue.append(contactVCard.birthday().toString(QLatin1String("yyyyMMdd")));
+        contactInfo << contactInfoField;
+    }
+    if (!contactVCard.url().isEmpty()) {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("url");
+        contactInfoField.fieldValue.append(contactVCard.url());
+        contactInfo << contactInfoField;
+    }
+
+//    QString name = userInfo.firstName() + QLatin1Char(' ') + userInfo.lastName();
+//    name = name.simplified();
+//    if (!name.isEmpty()) {
+//        Tp::ContactInfoField contactInfoField;
+//        contactInfoField.fieldName = QLatin1String("fn"); // Formatted name
+//        contactInfoField.fieldValue.append(name);
+//        contactInfo << contactInfoField;
+//    }
+    {
+        Tp::ContactInfoField contactInfoField;
+        contactInfoField.fieldName = QLatin1String("n");
+        contactInfoField.fieldValue.append(contactVCard.lastName()); // "Surname"
+        contactInfoField.fieldValue.append(contactVCard.firstName()); // "Given"
+        contactInfoField.fieldValue.append(contactVCard.middleName()); // Additional
+        contactInfoField.fieldValue.append(QString()); // Prefix
+        contactInfoField.fieldValue.append(QString()); // Suffix
+        contactInfo << contactInfoField;
+    }
+
+    return contactInfo;
+}
+
+Tp::ContactInfoMap Connection::getContactInfo(const Tp::UIntList &contacts, Tp::DBusError *error)
+{
+    DBG << contacts;
+
+    if (contacts.isEmpty()) {
+        return Tp::ContactInfoMap();
+    }
+
+    Tp::ContactInfoMap result;
+
+    foreach (uint handle, contacts) {
+        const Tp::ContactInfoFieldList contactInfo = requestContactInfo(handle, error);
+        if (!contactInfo.isEmpty()) {
+            result.insert(handle, contactInfo);
+        }
+    }
+
+    return result;
+}
+
+Tp::ContactInfoFieldList Connection::getUserInfo(const uint handle) const
+{
+    QString jid = m_uniqueContactHandleMap[handle];
+    if (jid.isEmpty()) {
+        return Tp::ContactInfoFieldList();
+    }
+
+    if (!m_vcardMap.contains(jid)) {
+        return Tp::ContactInfoFieldList();
+    }
+
+//Arguments: [Variant: [Argument: a(sasuu)
+//{
+//[Argument: (sasuu) "fn", {}, 1, 1],
+//[Argument: (sasuu) "bday", {}, 1, 4294967295],
+//[Argument: (sasuu) "mailer", {}, 1, 4294967295],
+//[Argument: (sasuu) "tz", {}, 1, 4294967295],
+//[Argument: (sasuu) "title", {}, 1, 4294967295],
+//[Argument: (sasuu) "role", {}, 1, 4294967295],
+//[Argument: (sasuu) "note", {}, 1, 4294967295],
+//[Argument: (sasuu) "prodid", {}, 1, 4294967295],
+//[Argument: (sasuu) "rev", {}, 1, 4294967295],
+//[Argument: (sasuu) "sort-string", {}, 1, 4294967295],
+//[Argument: (sasuu) "uid", {}, 1, 4294967295],
+//[Argument: (sasuu) "url", {}, 1, 4294967295],
+//[Argument: (sasuu) "nickname", {}, 3, 4294967295],
+//[Argument: (sasuu) "x-jabber", {}, 1, 4294967295],
+//[Argument: (sasuu) "x-desc", {}, 1, 4294967295],
+//[Argument: (sasuu) "n", {}, 1, 1],
+//[Argument: (sasuu) "adr", {"type=home", "type=work", "type=postal", "type=parcel", "type=dom", "type=intl", "type=pref"}, 0, 4294967295],
+//[Argument: (sasuu) "geo", {}, 1, 1],
+//[Argument: (sasuu) "tel", {"type=home", "type=work", "type=voice", "type=fax", "type=pager", "type=msg", "type=cell", "type=video", "type=bbs", "type=modem", "type=isdn", "type=pcs", "type=pref"}, 0, 4294967295],
+//[Argument: (sasuu) "email", {"type=home", "type=work", "type=internet", "type=pref", "type=x400"}, 0, 4294967295],
+//[Argument: (sasuu) "label", {"type=home", "type=work", "type=postal", "type=parcel", "type=dom", "type=intl", "type=pref"}, 0, 4294967295],
+//[Argument: (sasuu) "org", {}, 1, 4294967295]}
+//]]
+
+    Tp::ContactInfoFieldList result;
+    return result;
 }
 
 Tp::SimplePresence Connection::toTpPresence(QMap<QString, QXmppPresence> presences)
@@ -1035,6 +1243,8 @@ void Connection::updateVCard(const QString &jid, const QXmppVCardIq &vcard)
 {
     m_vcardMap.insert(jid, vcard);
     updateAvatar(vcard.photo(), jid, vcard.photoType());
+    uint handle = m_uniqueContactHandleMap[jid];
+    m_contactInfoIface->contactInfoChanged(handle, requestContactInfo(handle));
 }
 
 void Connection::updateAvatar(const QByteArray &photo, const QString &jid, const QString &type)
