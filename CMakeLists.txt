@@ -23,6 +23,7 @@ set(nonsense_SOURCES
     main.cc
     common.cc
     connection.cc
+    debug.cc
     filetransferchannel.cc
     protocol.cc
     textchannel.cc

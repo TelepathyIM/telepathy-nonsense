@@ -22,6 +22,7 @@
 #include <TelepathyQt/Constants>
 #include <TelepathyQt/Debug>
 
+#include "debug.hh"
 #include "protocol.hh"
 
 int main(int argc, char *argv[])
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
     Tp::registerTypes();
     Tp::enableDebug(true);
     Tp::enableWarnings(true);
+    DebugInterface debug;
 
     Tp::BaseProtocolPtr proto = Tp::BaseProtocol::create<Protocol>(QStringLiteral("xmpp"));
     Tp::BaseConnectionManagerPtr cm = Tp::BaseConnectionManager::create(QStringLiteral("nonsense"));
