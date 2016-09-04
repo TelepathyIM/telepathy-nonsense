@@ -203,9 +203,7 @@ void Connection::doConnect(Tp::DBusError *error)
     m_client = new QXmppClient();
     m_client->versionManager().setClientName(qAppName());
     m_client->versionManager().setClientVersion(telepathy_nonsense_VERSION_STRING);
-#if QT_VERSION >= 0x050000
     m_client->versionManager().setClientOs(QSysInfo::prettyProductName());
-#endif
 
 #if DEBUG_STANZAS
     QXmppLogger *logger = new QXmppLogger();
