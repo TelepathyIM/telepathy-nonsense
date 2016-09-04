@@ -75,7 +75,7 @@ void MucTextChannel::addMembers(const Tp::UIntList &contacts, const QString &rea
         const QString jid = m_connection->getContactIdentifier(handle);
         if (jid.isEmpty()) {
             if (error) {
-                error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+                error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
             }
             return;
         }

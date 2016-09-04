@@ -160,16 +160,16 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     m_requestsIface->requestableChannelClasses << requestableChannelClassFileTransfer;
     plugInterface(Tp::AbstractConnectionInterfacePtr::dynamicCast(m_requestsIface));
 
-    QString myJid = parameters.value(QLatin1String("account")).toString();
-    QString server = parameters.value(QLatin1String("server")).toString();
-    QString resource = parameters.value(QLatin1String("resource")).toString();
+    QString myJid = parameters.value(QStringLiteral("account")).toString();
+    QString server = parameters.value(QStringLiteral("server")).toString();
+    QString resource = parameters.value(QStringLiteral("resource")).toString();
     if (resource.isEmpty()) {
         /* Make sure that the resource is a non-empty string */
         resource = QUuid::createUuid().toString();
     }
-    uint priority = parameters.value(QLatin1String("priority")).toUInt();
-    bool requireEncryption = parameters.value(QLatin1String("require-encryption")).toBool();
-    bool ignoreSslErrors = parameters.value(QLatin1String("ignore-ssl-errors")).toBool();
+    uint priority = parameters.value(QStringLiteral("priority")).toUInt();
+    bool requireEncryption = parameters.value(QStringLiteral("require-encryption")).toBool();
+    bool ignoreSslErrors = parameters.value(QStringLiteral("ignore-ssl-errors")).toBool();
     m_clientConfig.setJid(myJid);
     if (!server.isEmpty()) {
         m_clientConfig.setHost(server);
@@ -216,18 +216,18 @@ void Connection::doConnect(Tp::DBusError *error)
      * dbus interface and assume "pc" if that fails. It would be great if
      * QSysInfo would provide this functionality. */
     QString clientType = QLatin1String("pc");
-    QDBusInterface hostnameInterface(QLatin1String("org.freedesktop.hostname1"),
-                                     QLatin1String("/org/freedesktop/hostname1"),
-                                     QLatin1String("org.freedesktop.hostname1"),
+    QDBusInterface hostnameInterface(QStringLiteral("org.freedesktop.hostname1"),
+                                     QStringLiteral("/org/freedesktop/hostname1"),
+                                     QStringLiteral("org.freedesktop.hostname1"),
                                      QDBusConnection::systemBus());
     QVariant chassisReply = hostnameInterface.property("Chassis");
     if (chassisReply.isValid()) {
         auto chassisType = chassisReply.toString();
         /* This is the best mapping that I can think of... */
         if (chassisType == QLatin1String("tablet")) {
-            clientType = QLatin1String("handheld");
+            clientType = QStringLiteral("handheld");
         } else if (chassisType == QLatin1String("handset")) {
-            clientType = QLatin1String("phone");
+            clientType = QStringLiteral("phone");
         }
     }
 
@@ -264,7 +264,7 @@ void Connection::doConnect(Tp::DBusError *error)
     Tp::BaseChannelServerAuthenticationTypePtr authType = Tp::BaseChannelServerAuthenticationType::create(TP_QT_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION);
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(authType));
 
-    m_saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QLatin1String("X-TELEPATHY-PASSWORD"),
+    m_saslIface = Tp::BaseChannelSASLAuthenticationInterface::create(QStringList() << QStringLiteral("X-TELEPATHY-PASSWORD"),
                                                                      /* hasInitialData */ false,
                                                                      /* canTryAgain */ true,
                                                                      /* authorizationIdentity */ m_client->configuration().jid(),
@@ -289,7 +289,7 @@ void Connection::saslStartMechanismWithData(const QString &mechanism, const QByt
     Q_UNUSED(error);
     Q_ASSERT(mechanism == QLatin1String("X-TELEPATHY-PASSWORD"));
 
-    m_saslIface->setSaslStatus(Tp::SASLStatusInProgress, QLatin1String("InProgress"), QVariantMap());
+    m_saslIface->setSaslStatus(Tp::SASLStatusInProgress, QStringLiteral("InProgress"), QVariantMap());
 
     m_clientConfig.setPassword(QString::fromUtf8(data));
 
@@ -338,7 +338,7 @@ void Connection::onError(QXmppClient::Error error)
     } else if (error == QXmppClient::XmppStreamError) {
         QXmppStanza::Error::Condition xmppStreamError = m_client->xmppStreamError();
         if (xmppStreamError == QXmppStanza::Error::NotAuthorized) {
-            m_saslIface->setSaslStatus(Tp::SASLStatusServerFailed, QLatin1String("ServerFailed"), QVariantMap());
+            m_saslIface->setSaslStatus(Tp::SASLStatusServerFailed, QStringLiteral("ServerFailed"), QVariantMap());
         } else {
             setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNoneSpecified);
         }
@@ -606,32 +606,32 @@ Tp::SimplePresence Connection::toTpPresence(QMap<QString, QXmppPresence> presenc
         switch (maxPresence.availableStatusType()) {
         case QXmppPresence::Online:
             tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
-            tpPresence.status = QLatin1String("available");
+            tpPresence.status = QStringLiteral("available");
             break;
         case QXmppPresence::Away:
             tpPresence.type = Tp::ConnectionPresenceTypeAway;
-            tpPresence.status = QLatin1String("away");
+            tpPresence.status = QStringLiteral("away");
             break;
         case QXmppPresence::XA:
             tpPresence.type = Tp::ConnectionPresenceTypeExtendedAway;
-            tpPresence.status = QLatin1String("xa");
+            tpPresence.status = QStringLiteral("xa");
             break;
         case QXmppPresence::DND:
             tpPresence.type = Tp::ConnectionPresenceTypeBusy;
-            tpPresence.status = QLatin1String("dnd");
+            tpPresence.status = QStringLiteral("dnd");
             break;
         case QXmppPresence::Chat:
             tpPresence.type = Tp::ConnectionPresenceTypeAvailable;
-            tpPresence.status = QLatin1String("chat");
+            tpPresence.status = QStringLiteral("chat");
             break;
         case QXmppPresence::Invisible:
             tpPresence.type = Tp::ConnectionPresenceTypeHidden;
-            tpPresence.status = QLatin1String("hidden");
+            tpPresence.status = QStringLiteral("hidden");
             break;
         }
     } else {
         tpPresence.type = Tp::ConnectionPresenceTypeOffline;
-        tpPresence.status = QLatin1String("offline");
+        tpPresence.status = QStringLiteral("offline");
     }
 
 //    qDebug() << "TP presence: " << tpPresence.type << " "  << tpPresence.status;
@@ -681,7 +681,7 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
     DBG;
 
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return QStringList();
     }
 
@@ -690,7 +690,7 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
     case Tp::HandleTypeRoom:
         break;
     default:
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unsupported handle type"));
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QStringLiteral("Unsupported handle type"));
         return QStringList();
     }
 
@@ -700,7 +700,7 @@ QStringList Connection::inspectHandles(uint handleType, const Tp::UIntList &hand
     for (uint handle : handles) {
         QString bareJid = map[handle];
         if (bareJid.isEmpty()) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
             return QStringList();
         }
 
@@ -727,7 +727,7 @@ Tp::UIntList Connection::requestHandles(uint handleType, const QStringList &iden
         }
         break;
     default:
-        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Connection::requestHandles - Unsupported handle type"));
+        error->set(TP_QT_ERROR_INVALID_ARGUMENT, QStringLiteral("Connection::requestHandles - Unsupported handle type"));
         break;
     }
 
@@ -742,7 +742,7 @@ void Connection::requestSubscription(const Tp::UIntList &handles, const QString 
     Q_UNUSED(message);
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
     }
 
     for (auto handle : handles) {
@@ -758,7 +758,7 @@ void Connection::removeContacts(const Tp::UIntList &handles, Tp::DBusError *erro
     }
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
     }
 
     Tp::ContactSubscriptionMap changes;
@@ -778,7 +778,7 @@ void Connection::authorizePublication(const Tp::UIntList &handles, Tp::DBusError
     }
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
     }
 
     for (uint handle : handles) {
@@ -793,7 +793,7 @@ void Connection::unsubscribe(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
     }
 
     for (uint handle : handles) {
@@ -808,7 +808,7 @@ void Connection::unpublish(const Tp::UIntList &handles, Tp::DBusError *error)
     }
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
     }
 
     for (uint handle : handles) {
@@ -852,21 +852,21 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
         break;
     default:
         if (error) {
-            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Unknown target handle type"));
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QStringLiteral("Unknown target handle type"));
         }
         return Tp::BaseChannelPtr();
     }
 
     if (targetHandleType == Tp::HandleTypeNone) {
         if (error) {
-            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QLatin1String("Target handle type is not present in the request details."));
+            error->set(TP_QT_ERROR_INVALID_ARGUMENT, QStringLiteral("Target handle type is not present in the request details."));
         }
         return Tp::BaseChannelPtr();
     }
 
     if (targetID.isEmpty()) {
         if (error) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Target handle is unknown."));
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Target handle is unknown."));
         }
         return Tp::BaseChannelPtr();
     }
@@ -995,7 +995,7 @@ void Connection::requestAvatars(const Tp::UIntList &handles, Tp::DBusError *erro
 {
     DBG;
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1030,7 +1030,7 @@ Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles,
     }
 
     if (!m_client || !m_client->isConnected()) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return Tp::AvatarTokenMap();
     }
 
@@ -1047,7 +1047,7 @@ Tp::AvatarTokenMap Connection::getKnownAvatarTokens(const Tp::UIntList &handles,
 void Connection::clearAvatar(Tp::DBusError *error)
 {
     if (!m_client || !m_client->isConnected() || !m_client->vCardManager().isClientVCardReceived()) {
-        error->set(TP_QT_ERROR_NOT_AVAILABLE, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_NOT_AVAILABLE, QStringLiteral("Disconnected"));
     }
 
     QXmppVCardIq clientVCard = m_client->vCardManager().clientVCard();
@@ -1060,13 +1060,13 @@ void Connection::clearAvatar(Tp::DBusError *error)
     presence.setFrom(m_clientConfig.jid());
     m_client->sendPacket(presence);
 
-    m_avatarTokens[m_clientConfig.jidBare()] = QLatin1String("");
+    m_avatarTokens[m_clientConfig.jidBare()] = QStringLiteral("");
 }
 
 QString Connection::setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error)
 {
     if (!m_client || !m_client->isConnected() || !m_client->vCardManager().isClientVCardReceived()) {
-        error->set(TP_QT_ERROR_NOT_AVAILABLE, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_NOT_AVAILABLE, QStringLiteral("Disconnected"));
     }
 
     QByteArray hash = QCryptographicHash::hash(avatar, QCryptographicHash::Sha1);
@@ -1101,12 +1101,12 @@ void Connection::updateGroups()
 void Connection::setContactGroups(uint contact, const QStringList &groups, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
     if (!m_uniqueContactHandleMap.contains(contact)) {
-        error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+        error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
     }
 
     const QString contactJid = m_uniqueContactHandleMap[contact];
@@ -1158,7 +1158,7 @@ void Connection::setContactGroups(uint contact, const QStringList &groups, Tp::D
 void Connection::setGroupMembers(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1166,7 +1166,7 @@ void Connection::setGroupMembers(const QString &group, const Tp::UIntList &membe
 
     for (uint handle : members) {
         if (!m_uniqueContactHandleMap.contains(handle)) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
             return;
         }
 
@@ -1227,7 +1227,7 @@ void Connection::setGroupMembers(const QString &group, const Tp::UIntList &membe
 void Connection::addToGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1240,7 +1240,7 @@ void Connection::addToGroup(const QString &group, const Tp::UIntList &members, T
 
     for (uint handle : members) {
         if (!m_uniqueContactHandleMap.contains(handle)) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
             return;
         }
 
@@ -1284,7 +1284,7 @@ void Connection::addToGroup(const QString &group, const Tp::UIntList &members, T
 void Connection::removeFromGroup(const QString &group, const Tp::UIntList &members, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1292,7 +1292,7 @@ void Connection::removeFromGroup(const QString &group, const Tp::UIntList &membe
 
     for (uint handle : members) {
         if (!m_uniqueContactHandleMap.contains(handle)) {
-            error->set(TP_QT_ERROR_INVALID_HANDLE, QLatin1String("Unknown handle"));
+            error->set(TP_QT_ERROR_INVALID_HANDLE, QStringLiteral("Unknown handle"));
             return;
         }
 
@@ -1341,7 +1341,7 @@ void Connection::removeFromGroup(const QString &group, const Tp::UIntList &membe
 void Connection::removeGroup(const QString &group, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1376,7 +1376,7 @@ void Connection::removeGroup(const QString &group, Tp::DBusError *error)
 void Connection::renameGroup(const QString &oldName, const QString &newName, Tp::DBusError *error)
 {
     if ((!m_client) || (!m_client->isConnected())) {
-        error->set(TP_QT_ERROR_DISCONNECTED, QLatin1String("Disconnected"));
+        error->set(TP_QT_ERROR_DISCONNECTED, QStringLiteral("Disconnected"));
         return;
     }
 
@@ -1384,7 +1384,7 @@ void Connection::renameGroup(const QString &oldName, const QString &newName, Tp:
     for (const QString &contactJid : m_client->rosterManager().getRosterBareJids()) {
         QXmppRosterIq::Item item = m_client->rosterManager().getRosterEntry(contactJid);
         if (item.groups().contains(newName)) {
-            error->set(TP_QT_ERROR_NOT_AVAILABLE, QLatin1String("There is already a group with the new name"));
+            error->set(TP_QT_ERROR_NOT_AVAILABLE, QStringLiteral("There is already a group with the new name"));
             return;
         }
     }
@@ -1410,7 +1410,7 @@ void Connection::renameGroup(const QString &oldName, const QString &newName, Tp:
     }
 
     if (affectedHandles.isEmpty()) {
-        error->set(TP_QT_ERROR_DOES_NOT_EXIST, QLatin1String("The group does not exist"));
+        error->set(TP_QT_ERROR_DOES_NOT_EXIST, QStringLiteral("The group does not exist"));
         return;
     }
 

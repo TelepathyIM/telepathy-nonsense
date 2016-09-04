@@ -25,51 +25,51 @@ QString xmppConditionToStr(QXmppStanza::Error::Condition condition)
 {
     switch (condition) {
     case QXmppStanza::Error::BadRequest:
-        return QLatin1String("Bad request");
+        return QStringLiteral("Bad request");
     case QXmppStanza::Error::Conflict:
-        return QLatin1String("Conflict");
+        return QStringLiteral("Conflict");
     case QXmppStanza::Error::FeatureNotImplemented:
-        return QLatin1String("Feature is not implemented");
+        return QStringLiteral("Feature is not implemented");
     case QXmppStanza::Error::Forbidden:
-        return QLatin1String("Forbidden");
+        return QStringLiteral("Forbidden");
     case QXmppStanza::Error::Gone:
-        return QLatin1String("Gone");
+        return QStringLiteral("Gone");
     case QXmppStanza::Error::InternalServerError:
-        return QLatin1String("Internal server error");
+        return QStringLiteral("Internal server error");
     case QXmppStanza::Error::ItemNotFound:
-        return QLatin1String("Item not found");
+        return QStringLiteral("Item not found");
     case QXmppStanza::Error::JidMalformed:
-        return QLatin1String("Jid is malformed");
+        return QStringLiteral("Jid is malformed");
     case QXmppStanza::Error::NotAcceptable:
-        return QLatin1String("Not acceptable");
+        return QStringLiteral("Not acceptable");
     case QXmppStanza::Error::NotAllowed:
-        return QLatin1String("Not allowed");
+        return QStringLiteral("Not allowed");
     case QXmppStanza::Error::NotAuthorized:
-        return QLatin1String("Not authorized");
+        return QStringLiteral("Not authorized");
     case QXmppStanza::Error::PaymentRequired:
-        return QLatin1String("Payment required");
+        return QStringLiteral("Payment required");
     case QXmppStanza::Error::RecipientUnavailable:
-        return QLatin1String("Recipient unavailable");
+        return QStringLiteral("Recipient unavailable");
     case QXmppStanza::Error::Redirect:
-        return QLatin1String("Redirect");
+        return QStringLiteral("Redirect");
     case QXmppStanza::Error::RegistrationRequired:
-        return QLatin1String("Registration required");
+        return QStringLiteral("Registration required");
     case QXmppStanza::Error::RemoteServerNotFound:
-        return QLatin1String("Remote server not found");
+        return QStringLiteral("Remote server not found");
     case QXmppStanza::Error::RemoteServerTimeout:
-        return QLatin1String("Remote server timeout");
+        return QStringLiteral("Remote server timeout");
     case QXmppStanza::Error::ResourceConstraint:
-        return QLatin1String("Resource constraint");
+        return QStringLiteral("Resource constraint");
     case QXmppStanza::Error::ServiceUnavailable:
-        return QLatin1String("Service unavailable");
+        return QStringLiteral("Service unavailable");
     case QXmppStanza::Error::SubscriptionRequired:
-        return QLatin1String("Subscription required");
+        return QStringLiteral("Subscription required");
     case QXmppStanza::Error::UndefinedCondition:
-        return QLatin1String("Undefined condition");
+        return QStringLiteral("Undefined condition");
     case QXmppStanza::Error::UnexpectedRequest:
-        return QLatin1String("Unexpected request");
+        return QStringLiteral("Unexpected request");
     default:
-        return QLatin1String("Unknown error");
+        return QStringLiteral("Unknown error");
     }
 }
 
@@ -80,7 +80,7 @@ TextChannel::TextChannel(Connection *connection, Tp::BaseChannel *baseChannel)
       m_targetJid(baseChannel->targetID())
 {
     DBG;
-    QStringList supportedContentTypes = QStringList() << QLatin1String("text/plain");
+    QStringList supportedContentTypes = QStringList() << QStringLiteral("text/plain");
     Tp::UIntList messageTypes = Tp::UIntList() << Tp::ChannelTextMessageTypeNormal
                                                << Tp::ChannelTextMessageTypeDeliveryReport;
 
@@ -124,8 +124,8 @@ QString TextChannel::sendMessage(const Tp::MessagePartList &messageParts, uint f
     QString content;
     for (auto &part : messageParts) {
         // TODO handle other parts?
-        if(part.count(QLatin1String("content-type")) && part.value(QLatin1String("content-type")).variant().toString() == QLatin1String("text/plain") && part.count(QLatin1String("content"))) {
-            content = part.value(QLatin1String("content")).variant().toString();
+        if(part.count(QStringLiteral("content-type")) && part.value(QStringLiteral("content-type")).variant().toString() == QLatin1String("text/plain") && part.count(QStringLiteral("content"))) {
+            content = part.value(QStringLiteral("content")).variant().toString();
             break;
         }
     }
@@ -143,13 +143,13 @@ void TextChannel::onMessageReceived(const QXmppMessage &message)
 void TextChannel::processReceivedMessage(const QXmppMessage &message, uint senderHandle, const QString &senderID)
 {
     Tp::MessagePart header;
-    header[QLatin1String("message-token")] = QDBusVariant(message.id());
+    header[QStringLiteral("message-token")] = QDBusVariant(message.id());
     if (message.stamp().isValid()) {
-        header[QLatin1String("message-sent")]  = QDBusVariant(message.stamp().toMSecsSinceEpoch() / 1000);
+        header[QStringLiteral("message-sent")]  = QDBusVariant(message.stamp().toMSecsSinceEpoch() / 1000);
     }
-    header[QLatin1String("message-received")]  = QDBusVariant(QDateTime::currentMSecsSinceEpoch() / 1000);
-    header[QLatin1String("message-sender")]    = QDBusVariant(senderHandle);
-    header[QLatin1String("message-sender-id")] = QDBusVariant(senderID);
+    header[QStringLiteral("message-received")]  = QDBusVariant(QDateTime::currentMSecsSinceEpoch() / 1000);
+    header[QStringLiteral("message-sender")]    = QDBusVariant(senderHandle);
+    header[QStringLiteral("message-sender-id")] = QDBusVariant(senderID);
 
     /* Handle chat states */
     if (message.state() != QXmppMessage::None) {
@@ -178,17 +178,17 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
 
     if (message.type() == QXmppMessage::Error) {
         Tp::MessagePartList partList;
-        header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
+        header[QStringLiteral("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
 
         switch (message.error().type()) {
         // It seems that there is no "continue" error type in the spec
         case QXmppStanza::Error::Cancel:
         case QXmppStanza::Error::Modify:
         case QXmppStanza::Error::Auth:
-            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusPermanentlyFailed);
+            header[QStringLiteral("delivery-status")] = QDBusVariant(Tp::DeliveryStatusPermanentlyFailed);
             break;
         case QXmppStanza::Error::Wait:
-            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusTemporarilyFailed);
+            header[QStringLiteral("delivery-status")] = QDBusVariant(Tp::DeliveryStatusTemporarilyFailed);
             break;
         default:
             break;
@@ -197,10 +197,10 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
         QString errorMessage = xmppConditionToStr(message.error().condition());
 
         if (message.error().code() != 0) {
-            errorMessage.append(QString(QLatin1String(" (code %1)")).arg(message.error().code()));
+            errorMessage.append(QString(QStringLiteral(" (code %1)")).arg(message.error().code()));
         }
 
-        header[QLatin1String("delivery-error-message")] = QDBusVariant(errorMessage);
+        header[QStringLiteral("delivery-error-message")] = QDBusVariant(errorMessage);
 
         partList << header;
         addReceivedMessage(partList);
@@ -210,15 +210,15 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
     /* Handle chat markers */
     if (message.marker() != QXmppMessage::NoMarker) {
         Tp::MessagePartList partList;
-        header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
+        header[QStringLiteral("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeDeliveryReport);
 
         switch (message.marker()) {
         case QXmppMessage::Acknowledged:
-            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusRead);
+            header[QStringLiteral("delivery-status")] = QDBusVariant(Tp::DeliveryStatusRead);
             break;
         case QXmppMessage::Displayed:
         case QXmppMessage::Received:
-            header[QLatin1String("delivery-status")] = QDBusVariant(Tp::DeliveryStatusDelivered);
+            header[QStringLiteral("delivery-status")] = QDBusVariant(Tp::DeliveryStatusDelivered);
             break;
         default:
             Q_ASSERT(0);
@@ -244,12 +244,12 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
     if (!message.body().isEmpty()) {
         Tp::MessagePartList body;
         Tp::MessagePart text;
-        text[QLatin1String("content-type")] = QDBusVariant(QLatin1String("text/plain"));
-        text[QLatin1String("content")]      = QDBusVariant(message.body());
+        text[QStringLiteral("content-type")] = QDBusVariant(QStringLiteral("text/plain"));
+        text[QStringLiteral("content")]      = QDBusVariant(message.body());
         body << text;
 
         Tp::MessagePartList partList;
-        header[QLatin1String("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+        header[QStringLiteral("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
         partList << header << body;
         addReceivedMessage(partList);
     }

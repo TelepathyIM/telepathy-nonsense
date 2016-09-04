@@ -61,20 +61,20 @@ Tp::SimpleStatusSpecMap Common::getSimpleStatusSpecMap()
     spUnknown.canHaveMessage = false;
 
     Tp::SimpleStatusSpecMap specs;
-    specs.insert(QLatin1String("offline"), spOffline);
-    specs.insert(QLatin1String("available"), spAvailable);
-    specs.insert(QLatin1String("away"), spAway);
-    specs.insert(QLatin1String("xa"), spXa);
-    specs.insert(QLatin1String("dnd"), spDnd);
-    specs.insert(QLatin1String("chat"), spChat);
-    specs.insert(QLatin1String("hidden"), spHidden);
-    specs.insert(QLatin1String("unknown"), spUnknown);
+    specs.insert(QStringLiteral("offline"), spOffline);
+    specs.insert(QStringLiteral("available"), spAvailable);
+    specs.insert(QStringLiteral("away"), spAway);
+    specs.insert(QStringLiteral("xa"), spXa);
+    specs.insert(QStringLiteral("dnd"), spDnd);
+    specs.insert(QStringLiteral("chat"), spChat);
+    specs.insert(QStringLiteral("hidden"), spHidden);
+    specs.insert(QStringLiteral("unknown"), spUnknown);
     return specs;
 }
 
 Tp::AvatarSpec Common::getAvatarSpec()
 {
-    return Tp::AvatarSpec(QStringList() << QLatin1String("image/png") << QLatin1String("image/jpeg"),
+    return Tp::AvatarSpec(QStringList() << QStringLiteral("image/png") << QStringLiteral("image/jpeg"),
                           0 /* minHeight */,
                           512 /* maxHeight */,
                           256 /* recommendedHeight */,
