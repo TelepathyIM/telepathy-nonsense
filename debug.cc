@@ -24,7 +24,24 @@ void DebugInterface::outputHandler(QtMsgType type, const QMessageLogContext &con
     Q_ASSERT(interface);
 
     QString domain = QStringLiteral("%1:%2, %3");
-    domain = domain.arg(QString::fromLatin1(context.file)).arg(context.line).arg(QString::fromLatin1(context.function));
+    QByteArray fileName = QByteArray::fromRawData(context.file, qstrlen(context.file));
+
+    static const char *namesToWrap[] = {
+        "nonsense",
+        "telepathy-qt"
+    };
+
+    for (const char *name : namesToWrap) {
+        int index = fileName.indexOf(name);
+        if (index < 0) {
+            continue;
+        }
+
+        fileName = fileName.mid(index);
+        break;
+    }
+
+    domain = domain.arg(QString::fromLocal8Bit(fileName)).arg(context.line).arg(QString::fromLatin1(context.function));
     switch (type) {
     case QtDebugMsg:
         interface->newDebugMessage(domain, Tp::DebugLevelDebug, msg);
