@@ -24,8 +24,9 @@
 
 Q_DECLARE_LOGGING_CATEGORY(qxmppGeneric)
 Q_DECLARE_LOGGING_CATEGORY(qxmppStanza)
+Q_DECLARE_LOGGING_CATEGORY(tracing)
 
-#define DBG qDebug() << "ENTERING " << Q_FUNC_INFO
+#define DBG qCDebug(tracing) << "ENTERING " << Q_FUNC_INFO
 
 class Common {
 public:

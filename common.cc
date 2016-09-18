@@ -20,6 +20,7 @@
 
 Q_LOGGING_CATEGORY(qxmppGeneric, "qxmpp.generic")
 Q_LOGGING_CATEGORY(qxmppStanza, "qxmpp.stanza")
+Q_LOGGING_CATEGORY(tracing, "nonsense.tracing")
 
 Tp::SimpleStatusSpecMap Common::getSimpleStatusSpecMap()
 {
