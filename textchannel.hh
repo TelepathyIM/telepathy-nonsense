@@ -37,6 +37,7 @@ public:
 
 public slots:
     virtual void onMessageReceived(const QXmppMessage &message);
+    void onCarbonMessageSent(const QXmppMessage &message);
 
 protected:
     TextChannel(Connection *connection, Tp::BaseChannel *baseChannel);

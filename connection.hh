@@ -28,7 +28,11 @@
 #include <QXmppMessage.h>
 #include <QXmppDiscoveryManager.h>
 #include <QXmppTransferManager.h>
+#if QXMPP_VERSION >= 0x000905
+#include <QXmppCarbonManager.h>
+#endif
 
+#include "textchannel.hh"
 #include "uniquehandlemap.hh"
 
 class QXmppMucManager;
@@ -75,6 +79,8 @@ private:
     void clearAvatar(Tp::DBusError *error);
     QString setAvatar(const QByteArray &avatar, const QString &mimetype, Tp::DBusError *error);
 
+    TextChannelPtr getTextChannel(const QString &contactJid, bool ensure, bool mucInvitation);
+
     void updateGroups();
     void setContactGroups(uint contact, const QStringList &groups, Tp::DBusError *error);
     void setGroupMembers(const QString &group, const Tp::UIntList &members, Tp::DBusError *error);
@@ -97,6 +103,8 @@ private slots:
     void onConnected();
     void onError(QXmppClient::Error error);
     void onMessageReceived(const QXmppMessage &message);
+    void onCarbonMessageReceived(const QXmppMessage &message);
+    void onCarbonMessageSent(const QXmppMessage &message);
     void onFileReceived(QXmppTransferJob *job);
     void onPresenceReceived(const QXmppPresence &presence);
 
@@ -127,6 +135,9 @@ private:
     QPointer<QXmppClient> m_client;
     QXmppDiscoveryManager *m_discoveryManager;
     QXmppMucManager *m_mucManager;
+#if QXMPP_VERSION >= 0x000905
+    QXmppCarbonManager *m_carbonManager;
+#endif
     QXmppPresence m_clientPresence;
     QXmppConfiguration m_clientConfig;
     UniqueHandleMap m_uniqueContactHandleMap;

@@ -27,7 +27,6 @@
 #include <QXmppConstants.h>
 
 #include "connection.hh"
-#include "textchannel.hh"
 #include "muctextchannel.hh"
 #include "filetransferchannel.hh"
 #include "common.hh"
@@ -241,6 +240,13 @@ void Connection::doConnect(Tp::DBusError *error)
     m_client->addExtension(transferManager);
     connect(transferManager, &QXmppTransferManager::fileReceived, this, &Connection::onFileReceived);
 
+#if QXMPP_VERSION >= 0x000905
+    m_carbonManager = new QXmppCarbonManager;
+    m_client->addExtension(m_carbonManager);
+    connect(m_carbonManager, &QXmppCarbonManager::messageReceived, this, &Connection::onCarbonMessageReceived);
+    connect(m_carbonManager, &QXmppCarbonManager::messageSent, this, &Connection::onCarbonMessageSent);
+#endif
+
     /* The features for ourself must only be added after adding all QXmpp
      * extensions - we would miss features otherwise */
     m_contactsFeatures[m_clientConfig.jid()] = m_discoveryManager->capabilities().features();
@@ -321,6 +327,7 @@ void Connection::onConnected()
         m_avatarTokens[m_uniqueContactHandleMap[selfHandle()]] = QString::fromLatin1(m_clientPresence.photoHash());
     }
 
+    m_discoveryManager->requestInfo(m_clientConfig.domain());
     m_serverEntities.push_back(m_clientConfig.domain());
     m_discoveryManager->requestItems(m_clientConfig.domain());
 }
@@ -477,6 +484,17 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
             }
         }
     }
+
+#if QXMPP_VERSION >= 0x000905
+    bool carbonFeaturesAvailable = true;
+    for (auto &carbonFeature : m_carbonManager->discoveryFeatures()) {
+        if (!iq.features().contains(carbonFeature)) {
+            carbonFeaturesAvailable = false;
+            break;
+        }
+    }
+    m_carbonManager->setCarbonsEnabled(carbonFeaturesAvailable);
+#endif
 }
 
 void Connection::onDiscoveryItemsReceived(const QXmppDiscoveryIq &iq)
@@ -909,26 +927,20 @@ Tp::BaseChannelPtr Connection::createChannelCB(const QVariantMap &request, Tp::D
     return baseChannel;
 }
 
-void Connection::onMessageReceived(const QXmppMessage &message)
+TextChannelPtr Connection::getTextChannel(const QString &contactJid, bool ensure, bool mucInvitation)
 {
     uint initiatorHandle, targetHandle;
-
     Tp::HandleType handleType;
 
-    // GroupChat messages processed in the MucTextChannel itself.
-    if (message.type() == QXmppMessage::GroupChat) {
-        return;
-    }
-
-    const QString bareJid = QXmppUtils::jidToBareJid(message.from());
+    const QString bareJid = QXmppUtils::jidToBareJid(contactJid);
 
     // This check (if rooms map contains jid) prevents us from repeated invitation.
     if (m_uniqueRoomHandleMap.contains(bareJid)) {
         qCDebug(general) << Q_FUNC_INFO << "message from room" << bareJid;
-        return;
+        return TextChannelPtr();
     }
 
-    if (!message.mucInvitationJid().isEmpty()) {
+    if (mucInvitation) {
         initiatorHandle = targetHandle = m_uniqueRoomHandleMap[bareJid];
         handleType = Tp::HandleTypeRoom;
     } else {
@@ -937,7 +949,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     }
 
     if (handleType == Tp::HandleTypeContact) {
-        setLastResource(QXmppUtils::jidToBareJid(message.from()), QXmppUtils::jidToResource(message.from()));
+        setLastResource(QXmppUtils::jidToBareJid(contactJid), QXmppUtils::jidToResource(contactJid));
     }
 
     //TODO: initiator should be group creator
@@ -950,21 +962,63 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".TargetHandleType")] = handleType;
     request[TP_QT_IFACE_CHANNEL + QLatin1String(".InitiatorHandle")] = initiatorHandle;
 
-    Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+    Tp::BaseChannelPtr channel;
+    if (ensure) {
+        channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
+    } else {
+        channel = getExistingChannel(request, &error);
+    }
 
     if (error.isValid()) {
         qCWarning(general) << "ensureChannel failed:" << error.name() << " " << error.message();
+    }
+    if (!channel) {
+        return TextChannelPtr();
+    }
+
+    return TextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
+}
+
+void Connection::onMessageReceived(const QXmppMessage &message)
+{
+    // GroupChat messages processed in the MucTextChannel itself.
+    if (message.type() == QXmppMessage::GroupChat) {
         return;
     }
 
-    TextChannelPtr textChannel = TextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
-
+    TextChannelPtr textChannel = getTextChannel(message.from(), true, !message.mucInvitationJid().isEmpty());
     if (!textChannel) {
         qCDebug(general) << "Error, channel is not a TextChannel?";
         return;
     }
 
     textChannel->onMessageReceived(message);
+}
+
+void Connection::onCarbonMessageReceived(const QXmppMessage &message)
+{
+    /* There must not be any carbon copies for group chat messages */
+    if (message.type() == QXmppMessage::GroupChat) {
+        return;
+    }
+
+    TextChannelPtr textChannel = getTextChannel(message.from(), false, !message.mucInvitationJid().isEmpty());
+    if (textChannel) {
+        textChannel->onMessageReceived(message);
+    }
+}
+
+void Connection::onCarbonMessageSent(const QXmppMessage &message)
+{
+    /* There must not be any carbon copies for group chat messages */
+    if (message.type() == QXmppMessage::GroupChat) {
+        return;
+    }
+
+    TextChannelPtr textChannel = getTextChannel(message.to(), false, !message.mucInvitationJid().isEmpty());
+    if (textChannel) {
+        textChannel->onCarbonMessageSent(message);
+    }
 }
 
 void Connection::onFileReceived(QXmppTransferJob *job)

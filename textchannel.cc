@@ -255,6 +255,32 @@ void TextChannel::processReceivedMessage(const QXmppMessage &message, uint sende
     }
 }
 
+void TextChannel::onCarbonMessageSent(const QXmppMessage &message)
+{
+    Tp::MessagePart header;
+    header[QStringLiteral("message-token")] = QDBusVariant(message.id());
+    if (message.stamp().isValid()) {
+        header[QStringLiteral("message-sent")]  = QDBusVariant(message.stamp().toMSecsSinceEpoch() / 1000);
+    }
+    header[QStringLiteral("message-received")]  = QDBusVariant(QDateTime::currentMSecsSinceEpoch() / 1000);
+    header[QStringLiteral("message-sender")]    = QDBusVariant(m_connection->ensureContactHandle(selfJid()));
+    header[QStringLiteral("message-sender-id")] = QDBusVariant(selfJid());
+
+    /* Text message */
+    if (!message.body().isEmpty()) {
+        Tp::MessagePartList body;
+        Tp::MessagePart text;
+        text[QStringLiteral("content-type")] = QDBusVariant(QStringLiteral("text/plain"));
+        text[QStringLiteral("content")]      = QDBusVariant(message.body());
+        body << text;
+
+        Tp::MessagePartList partList;
+        header[QStringLiteral("message-type")]  = QDBusVariant(Tp::ChannelTextMessageTypeNormal);
+        partList << header << body;
+        m_messagesIface->messageSent(partList, 0, message.id());
+    }
+}
+
 bool TextChannel::sendQXmppMessage(QXmppMessage &message)
 {
     return m_connection->qxmppClient()->sendPacket(message);
