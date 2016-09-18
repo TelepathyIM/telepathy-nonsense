@@ -33,8 +33,6 @@
 #include "common.hh"
 #include "telepathy-nonsense-config.h"
 
-#define DEBUG_STANZAS 0
-
 Tp::RequestableChannelClass createRequestableChannelClassText()
 {
     Tp::RequestableChannelClass text;
@@ -205,12 +203,11 @@ void Connection::doConnect(Tp::DBusError *error)
     m_client->versionManager().setClientVersion(telepathy_nonsense_VERSION_STRING);
     m_client->versionManager().setClientOs(QSysInfo::prettyProductName());
 
-#if DEBUG_STANZAS
     QXmppLogger *logger = new QXmppLogger();
-    logger->setLoggingType(QXmppLogger::StdoutLogging);
+    logger->setLoggingType(QXmppLogger::SignalLogging);
     logger->setMessageTypes(QXmppLogger::AnyMessage);
+    connect(logger, &QXmppLogger::message, this, &Connection::onLogMessage);
     m_client->setLogger(logger);
-#endif
 
     /* Try to set the device type. For now, we will try to query the hostnamed
      * dbus interface and assume "pc" if that fails. It would be great if
@@ -344,6 +341,24 @@ void Connection::onError(QXmppClient::Error error)
         }
     } else {
         Q_ASSERT(0);
+    }
+}
+
+void Connection::onLogMessage(QXmppLogger::MessageType type, const QString &text)
+{
+    switch(type) {
+    case QXmppLogger::ReceivedMessage:
+    case QXmppLogger::SentMessage:
+        qCDebug(qxmppStanza) << text;
+        break;
+    case QXmppLogger::InformationMessage:
+        qCInfo(qxmppGeneric) << text;
+        break;
+    case QXmppLogger::WarningMessage:
+        qCCritical(qxmppGeneric) << text;
+        break;
+    default:
+        qCDebug(qxmppGeneric) << text;
     }
 }
 

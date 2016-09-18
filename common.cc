@@ -18,6 +18,9 @@
 
 #include "common.hh"
 
+Q_LOGGING_CATEGORY(qxmppGeneric, "qxmpp.generic")
+Q_LOGGING_CATEGORY(qxmppStanza, "qxmpp.stanza")
+
 Tp::SimpleStatusSpecMap Common::getSimpleStatusSpecMap()
 {
     Tp::SimpleStatusSpec spOffline;

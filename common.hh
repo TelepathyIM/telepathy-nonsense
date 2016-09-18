@@ -19,9 +19,13 @@
 #ifndef COMMON_HH
 #define COMMON_HH
 
-#define DBG qDebug() << "ENTERING " << Q_FUNC_INFO
-
+#include <QLoggingCategory>
 #include <TelepathyQt/ProtocolInterface>
+
+Q_DECLARE_LOGGING_CATEGORY(qxmppGeneric)
+Q_DECLARE_LOGGING_CATEGORY(qxmppStanza)
+
+#define DBG qDebug() << "ENTERING " << Q_FUNC_INFO
 
 class Common {
 public:

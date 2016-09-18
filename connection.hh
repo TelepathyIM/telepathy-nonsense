@@ -108,6 +108,8 @@ private slots:
     void onVCardReceived(QXmppVCardIq);
     void onClientVCardReceived();
 
+    void onLogMessage(QXmppLogger::MessageType type, const QString &text);
+
 private:
     void updateAvatar(const QByteArray &photo, const QString &jid, const QString &type);
 
