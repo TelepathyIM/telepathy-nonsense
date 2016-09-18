@@ -188,7 +188,7 @@ Connection::Connection(const QDBusConnection &dbusConnection, const QString &cmN
     setInspectHandlesCallback(Tp::memFun(this, &Connection::inspectHandles));
     setCreateChannelCallback(Tp::memFun(this, &Connection::createChannelCB));
     setRequestHandlesCallback(Tp::memFun(this, &Connection::requestHandles));
-    connect(this, SIGNAL(disconnected()), SLOT(doDisconnect()));
+    connect(this, &Connection::disconnected, this, &Connection::doDisconnect);
 }
 
 void Connection::doConnect(Tp::DBusError *error)
@@ -231,29 +231,29 @@ void Connection::doConnect(Tp::DBusError *error)
     /* Enable extensions */
     m_discoveryManager = m_client->findExtension<QXmppDiscoveryManager>();
     m_discoveryManager->setClientType(clientType);
-    connect(m_discoveryManager, SIGNAL(infoReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryInfoReceived(QXmppDiscoveryIq)));
-    connect(m_discoveryManager, SIGNAL(itemsReceived(QXmppDiscoveryIq)), this, SLOT(onDiscoveryItemsReceived(QXmppDiscoveryIq)));
+    connect(m_discoveryManager, &QXmppDiscoveryManager::infoReceived, this, &Connection::onDiscoveryInfoReceived);
+    connect(m_discoveryManager, &QXmppDiscoveryManager::itemsReceived, this, &Connection::onDiscoveryItemsReceived);
 
     m_mucManager = new QXmppMucManager();
     m_client->addExtension(m_mucManager);
 
     QXmppTransferManager *transferManager = new QXmppTransferManager;
     m_client->addExtension(transferManager);
-    connect(transferManager, SIGNAL(fileReceived(QXmppTransferJob *)), this, SLOT(onFileReceived(QXmppTransferJob *)));
+    connect(transferManager, &QXmppTransferManager::fileReceived, this, &Connection::onFileReceived);
 
     /* The features for ourself must only be added after adding all QXmpp
      * extensions - we would miss features otherwise */
     m_contactsFeatures[m_clientConfig.jid()] = m_discoveryManager->capabilities().features();
 
-    connect(m_client, SIGNAL(connected()), this, SLOT(onConnected()));
-    connect(m_client, SIGNAL(error(QXmppClient::Error)), this, SLOT(onError(QXmppClient::Error)));
-    connect(m_client, SIGNAL(messageReceived(const QXmppMessage &)), this, SLOT(onMessageReceived(const QXmppMessage &)));
-    connect(m_client, SIGNAL(presenceReceived(const QXmppPresence &)), this, SLOT(onPresenceReceived(const QXmppPresence &)));
+    connect(m_client, &QXmppClient::connected, this, &Connection::onConnected);
+    connect(m_client, &QXmppClient::error, this, &Connection::onError);
+    connect(m_client, &QXmppClient::messageReceived, this, &Connection::onMessageReceived);
+    connect(m_client, &QXmppClient::presenceReceived, this, &Connection::onPresenceReceived);
 
-    connect(&m_client->rosterManager(), SIGNAL(rosterReceived()), this, SLOT(onRosterReceived()));
+    connect(&m_client->rosterManager(), &QXmppRosterManager::rosterReceived, this, &Connection::onRosterReceived);
 
-    connect(&m_client->vCardManager(), SIGNAL(vCardReceived(QXmppVCardIq)), this, SLOT(onVCardReceived(QXmppVCardIq)));
-    connect(&m_client->vCardManager(), SIGNAL(clientVCardReceived()), this, SLOT(onClientVCardReceived()));
+    connect(&m_client->vCardManager(), &QXmppVCardManager::vCardReceived, this, &Connection::onVCardReceived);
+    connect(&m_client->vCardManager(), &QXmppVCardManager::clientVCardReceived, this, &Connection::onClientVCardReceived);
 
     //SASL channel registration
     Tp::DBusError saslError;

@@ -36,7 +36,7 @@ MucTextChannel::MucTextChannel(Connection *connection, Tp::BaseChannel *baseChan
         m_room->join();
     }
 
-    connect(m_room, SIGNAL(participantsChanged()), this, SLOT(onMucParticipantsChanged()));
+    connect(m_room, &QXmppMucRoom::participantsChanged, this, &MucTextChannel::onMucParticipantsChanged);
 
     // Default flags:
     Tp::ChannelGroupFlags groupFlags = Tp::ChannelGroupFlagChannelSpecificHandles|Tp::ChannelGroupFlagHandleOwnersNotAvailable;
@@ -64,8 +64,8 @@ MucTextChannel::MucTextChannel(Connection *connection, Tp::BaseChannel *baseChan
 
     baseChannel->plugInterface(Tp::AbstractChannelInterfacePtr::dynamicCast(m_roomConfigIface));
 
-    connect(m_room, SIGNAL(nameChanged(QString)), this, SLOT(onRoomNameChanged(QString)));
-    connect(m_room, SIGNAL(messageReceived(QXmppMessage)), this, SLOT(onMessageReceived(QXmppMessage)));
+    connect(m_room, &QXmppMucRoom::nameChanged, this, &MucTextChannel::onRoomNameChanged);
+    connect(m_room, &QXmppMucRoom::messageReceived, this, &MucTextChannel::onMessageReceived);
 }
 
 void MucTextChannel::addMembers(const Tp::UIntList &contacts, const QString &reason, Tp::DBusError *error)

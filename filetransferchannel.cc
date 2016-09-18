@@ -38,9 +38,7 @@ FileTransferChannel::FileTransferChannel(Connection *connection, Tp::BaseChannel
     /* Open the QBuffer - QXmpp requires this */
     m_ioChannel->open(QIODevice::ReadWrite);
 
-    bool success;
-    success = connect(this, SIGNAL(stateChanged(uint, uint)), this, SLOT(onStateChanged(uint, uint)));
-    Q_ASSERT(success);
+    connect(this, &FileTransferChannel::stateChanged, this, &FileTransferChannel::onStateChanged);
 
     if (direction() == FileTransferChannel::Incoming) {
         m_transferJob = request.value(NONSENSE_XMPP_TRANSFER_JOB).value<QXmppTransferJob *>();
@@ -52,10 +50,10 @@ FileTransferChannel::FileTransferChannel(Connection *connection, Tp::BaseChannel
 
     Q_ASSERT(m_transferJob);
     Q_ASSERT(m_transferJob->error() == QXmppTransferJob::NoError);
-    success = connect(m_transferJob, SIGNAL(stateChanged(QXmppTransferJob::State)), this, SLOT(onQxmppTransferStateChanged(QXmppTransferJob::State)));
-    Q_ASSERT(success);
-    success = connect(m_transferJob, SIGNAL(error(QXmppTransferJob::Error)), this, SLOT(onTransferError(QXmppTransferJob::Error)));
-    Q_ASSERT(success);
+    connect(m_transferJob, &QXmppTransferJob::stateChanged, this, &FileTransferChannel::onQxmppTransferStateChanged);
+    /* Unfortunately, there are two error() functions (but only one signal) in QXmppTransferJob.
+     * Use the old syntax for now */
+    connect(m_transferJob, SIGNAL(error(QXmppTransferJob::Error)), this, SLOT(onTransferError(QXmppTransferJob::Error)));
     m_ioChannel->setParent(m_transferJob);
 }
 
@@ -100,7 +98,7 @@ void FileTransferChannel::onQxmppTransferStateChanged(QXmppTransferJob::State st
     case QXmppTransferJob::TransferState:
         if (direction() == FileTransferChannel::Outgoing) {
             remoteAcceptFile(m_ioChannel, 0); /* The initial offset is always 0 for QXmpp */
-            connect(m_transferJob, SIGNAL(progress(qint64,qint64)), this, SLOT(onOutgoingTransferProgressChanged(qint64)));
+            connect(m_transferJob, &QXmppTransferJob::progress, this, &FileTransferChannel::onOutgoingTransferProgressChanged);
         }
     case QXmppTransferJob::StartState:
     case QXmppTransferJob::FinishedState:
