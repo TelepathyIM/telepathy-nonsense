@@ -433,14 +433,14 @@ void Connection::updateJidPresence(const QString &jid, const QXmppPresence &pres
         m_avatarTokens[jid] = QString::fromLatin1(presence.photoHash());
     }
 
-    qDebug() << "capability hash:" << presence.capabilityHash();
-    qDebug() << "capability node and verification:" << presence.capabilityNode() << presence.capabilityVer().toBase64();
-    qDebug() << "capability extensions:" << presence.capabilityExt();
+    qCDebug(general) << "capability hash:" << presence.capabilityHash();
+    qCDebug(general) << "capability node and verification:" << presence.capabilityNode() << presence.capabilityVer().toBase64();
+    qCDebug(general) << "capability extensions:" << presence.capabilityExt();
 
     if (!presence.capabilityVer().isEmpty()) {
 //        QString nodeWithVerification = presence.capabilityNode() + QLatin1Char('#') + QString::fromLatin1(presence.capabilityVer().toBase64());
 
-        qDebug() << Q_FUNC_INFO << "Request info from" << presence.from();
+        qCDebug(general) << Q_FUNC_INFO << "Request info from" << presence.from();
         m_discoveryManager->requestInfo(presence.from());
     }
 }
@@ -449,11 +449,12 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
 {
     DBG;
 
-    qDebug() << iq.queryNode();
-    qDebug() << iq.type() << iq.queryType();
-    qDebug() << iq.from() << iq.to();
-    qDebug() << iq.features();
-    qDebug().noquote() << iq.verificationString().toBase64();
+    qCDebug(general) << "Received the following discovery info:";
+    qCDebug(general) << iq.queryNode();
+    qCDebug(general) << iq.type() << iq.queryType();
+    qCDebug(general) << iq.from() << iq.to();
+    qCDebug(general) << iq.features();
+    qCDebug(general).noquote() << iq.verificationString().toBase64();
 
     for (auto &identity : iq.identities()) {
         if (identity.category() == QLatin1String("client")) {
@@ -470,7 +471,7 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
             }
         } else if (identity.category() == QLatin1String("proxy")) {
             if (identity.type() == QLatin1String("bytestreams") && m_serverEntities.contains(iq.from())) {
-                qDebug() << "Found proxy with JID" << iq.from();
+                qCDebug(general) << "Found proxy with JID" << iq.from();
                 QXmppTransferManager *transferManager = m_client->findExtension<QXmppTransferManager>();
                 transferManager->setProxy(iq.from());
             }
@@ -649,7 +650,6 @@ Tp::SimplePresence Connection::toTpPresence(QMap<QString, QXmppPresence> presenc
         tpPresence.status = QStringLiteral("offline");
     }
 
-//    qDebug() << "TP presence: " << tpPresence.type << " "  << tpPresence.status;
     return tpPresence;
 }
 
@@ -924,7 +924,7 @@ void Connection::onMessageReceived(const QXmppMessage &message)
 
     // This check (if rooms map contains jid) prevents us from repeated invitation.
     if (m_uniqueRoomHandleMap.contains(bareJid)) {
-        qDebug() << Q_FUNC_INFO << "message from room" << bareJid;
+        qCDebug(general) << Q_FUNC_INFO << "message from room" << bareJid;
         return;
     }
 
@@ -953,14 +953,14 @@ void Connection::onMessageReceived(const QXmppMessage &message)
     Tp::BaseChannelPtr channel = ensureChannel(request, yours, /* suppressHandler */ false, &error);
 
     if (error.isValid()) {
-        qWarning() << "ensureChannel failed:" << error.name() << " " << error.message();
+        qCWarning(general) << "ensureChannel failed:" << error.name() << " " << error.message();
         return;
     }
 
     TextChannelPtr textChannel = TextChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_TEXT));
 
     if (!textChannel) {
-        qDebug() << "Error, channel is not a TextChannel?";
+        qCDebug(general) << "Error, channel is not a TextChannel?";
         return;
     }
 
@@ -994,14 +994,14 @@ void Connection::onFileReceived(QXmppTransferJob *job)
     Tp::BaseChannelPtr channel = createChannel(request, false /* suppressHandler */, &error);
 
     if (error.isValid()) {
-        qWarning() << "createChannel failed:" << error.name() << " " << error.message();
+        qCWarning(general) << "createChannel failed:" << error.name() << " " << error.message();
         return;
     }
 
     FileTransferChannelPtr fileTransferChannel = FileTransferChannelPtr::dynamicCast(channel->interface(TP_QT_IFACE_CHANNEL_TYPE_FILE_TRANSFER));
 
     if (!fileTransferChannel) {
-        qDebug() << "Error, channel is not a FileTransferChannel?";
+        qCDebug(general) << "Error, channel is not a FileTransferChannel?";
         return;
     }
 }
@@ -1487,7 +1487,7 @@ Tp::ContactCapabilitiesMap Connection::getContactCapabilities(const Tp::UIntList
         if (caps.contains(QString::fromLatin1(ns_stream_initiation_file_transfer))) {
             channelClassList << requestableChannelClassFileTransfer;
         } else {
-            qDebug() << "Contact" << fullJid << "caps:" << caps;
+            qCDebug(general) << "Contact" << fullJid << "has these caps:" << caps;
         }
         capabilities[contacts.at(i)] = channelClassList;
     }

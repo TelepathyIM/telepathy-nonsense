@@ -106,7 +106,7 @@ void MucTextChannel::onMessageReceived(const QXmppMessage &message)
     uint sender = m_groupIface->memberIdentifiers().key(message.from());
 
     if (sender == 0) {
-        qDebug() << Q_FUNC_INFO << "unknown sender" << message.from() << "body:" << message.body();
+        qCDebug(general) << Q_FUNC_INFO << "unknown sender" << message.from() << "body:" << message.body();
         return;
     }
 
