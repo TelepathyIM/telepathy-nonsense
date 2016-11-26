@@ -493,7 +493,9 @@ void Connection::onDiscoveryInfoReceived(const QXmppDiscoveryIq &iq)
             break;
         }
     }
-    m_carbonManager->setCarbonsEnabled(carbonFeaturesAvailable);
+    if (carbonFeaturesAvailable) {
+        m_carbonManager->setCarbonsEnabled(true);
+    }
 #endif
 }
 
