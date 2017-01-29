@@ -24,7 +24,6 @@
 #include <QXmppPresence.h>
 #include <QXmppTransferManager.h>
 #include <QXmppMucManager.h>
-#include <QXmppConstants.h>
 
 #include "connection.hh"
 #include "muctextchannel.hh"
@@ -1540,7 +1539,7 @@ Tp::ContactCapabilitiesMap Connection::getContactCapabilities(const Tp::UIntList
         const QString fullJid = contactJids.at(i) + lastResourceForJid(contactJids.at(i), /* force */ true);
         const QStringList caps = m_contactsFeatures.value(fullJid);
 
-        if (caps.contains(QString::fromLatin1(ns_stream_initiation_file_transfer))) {
+        if (caps.contains(QStringLiteral("http://jabber.org/protocol/si/profile/file-transfer"))) {
             channelClassList << requestableChannelClassFileTransfer;
         } else {
             qCDebug(general) << "Contact" << fullJid << "has these caps:" << caps;
