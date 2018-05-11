@@ -336,7 +336,7 @@ void Connection::onError(QXmppClient::Error error)
     DBG;
 
     //TODO
-    if (error == QXmppClient::SocketError || QXmppClient::KeepAliveError) {
+    if (error == QXmppClient::SocketError || error == QXmppClient::KeepAliveError) {
         setStatus(Tp::ConnectionStatusDisconnected, Tp::ConnectionStatusReasonNetworkError);
     } else if (error == QXmppClient::XmppStreamError) {
         QXmppStanza::Error::Condition xmppStreamError = m_client->xmppStreamError();
