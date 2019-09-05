@@ -16,7 +16,7 @@ add_definitions(-DQT_NO_CAST_FROM_ASCII)
 
 find_package(TelepathyQt5 0.9.6 REQUIRED)
 find_package(TelepathyQt5Service 0.9.6 REQUIRED)
-find_package(QXmpp 0.8.1 REQUIRED)
+find_package(QXmpp 1.0.0 REQUIRED CONFIG)
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
 include(GNUInstallDirs)
@@ -42,15 +42,14 @@ set_target_properties(telepathy-nonsense PROPERTIES AUTOMOC TRUE)
 
 target_include_directories(telepathy-nonsense PRIVATE
     ${TELEPATHY_QT5_INCLUDE_DIR}
-    ${QXMPP_INCLUDE_DIR}
 )
 target_link_libraries(telepathy-nonsense
     Qt5::Core
     Qt5::DBus
     Qt5::Network
+    QXmpp::QXmpp
     ${TELEPATHY_QT5_LIBRARIES}
     ${TELEPATHY_QT5_SERVICE_LIBRARIES}
-    ${QXMPP_LIBRARIES}
 )
 
 configure_file(nonsense.service.in org.freedesktop.Telepathy.ConnectionManager.nonsense.service)
