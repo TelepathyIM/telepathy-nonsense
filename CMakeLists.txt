@@ -20,6 +20,7 @@ find_package(QXmpp 0.8.1 REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core DBus Xml Network)
 
 include(GNUInstallDirs)
+include(FeatureSummary)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -69,3 +70,5 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Telepathy.ConnectionManager.nonsense.service
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/services
 )
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
