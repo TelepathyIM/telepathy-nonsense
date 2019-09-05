@@ -1,6 +1,6 @@
 project(telepathy-nonsense)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.3)
 
 set (telepathy_nonsense_VERSION_MAJOR 0)
 set (telepathy_nonsense_VERSION_MINOR 1)
